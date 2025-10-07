@@ -1,46 +1,67 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { createUntis, realTimetable } from "../../method";
+import { sharedStyles } from "../../styles/shared";
+import { loadCredentials } from "../../utils/secureCredentials";
 
-// TODO: Move credentials to a secure location (env variables / secure store). Hardcoding is insecure.
-const credentials = {
-	school: "",
-	user: "",
-	password: "",
-	host: "",
-};
+// Credentials now sourced from secure storage
 
 // initial date (can default to today or a fixed date)
 const initialDate = new Date();
 
 const Timetable = () => {
 	const [timetable, setTimetable] = useState<any | null>(null);
+	const [timetableWeek, setTimetableWeek] = useState<Record<string, any> | null>(null);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+	const [viewMode, setViewMode] = useState<"day" | "week">("day");
 
 	const fetchData = useCallback(
 		async (dateOverride?: Date) => {
 			setLoading(true);
 			setError(null);
 			try {
-				const untis = createUntis(credentials.school, credentials.user, credentials.password, credentials.host);
+				const stored = await loadCredentials();
+				if (!stored) {
+					setError("Nicht eingeloggt");
+					setTimetable(null);
+					setTimetableWeek(null);
+					return;
+				}
+				const untis = createUntis(stored.school, stored.user, stored.password, stored.host);
 				await untis.login();
 				const dateToUse = dateOverride || selectedDate;
-				const data = await realTimetable(untis, dateToUse);
-				setTimetable(data);
+				if (viewMode === "day") {
+					const data = await realTimetable(untis, dateToUse);
+					setTimetable(data);
+					setTimetableWeek(null);
+				} else {
+					// week mode: fetch Monday-Friday for the week containing selectedDate
+					const weekDays = getWeekDays(dateToUse);
+					const results = await Promise.all(
+						weekDays.map(async (d) => {
+							return { iso: isoKey(d), data: await realTimetable(untis, d) };
+						})
+					);
+					const map: Record<string, any> = {};
+					results.forEach((r) => (map[r.iso] = r.data));
+					setTimetableWeek(map);
+					setTimetable(null);
+				}
 			} catch (e: any) {
 				setError(e?.message || "Failed to load timetable");
 			} finally {
 				setLoading(false);
 			}
 		},
-		[selectedDate]
+		[selectedDate, viewMode]
 	);
 
 	useEffect(() => {
 		fetchData();
-	}, [fetchData, selectedDate]);
+	}, [fetchData, selectedDate, viewMode]);
 
 	// Helper to format HHmm numbers -> HH:MM
 	const formatTime = (n: number) => {
@@ -49,15 +70,15 @@ const Timetable = () => {
 		return `${s.slice(0, 2)}:${s.slice(2)}`;
 	};
 
-	// Build display blocks from timetable object
-	const blocks = React.useMemo(() => {
-		if (!timetable) return [] as any[];
+	// Helpers to build block arrays
+	const buildBlocks = (dayData: any) => {
+		if (!dayData) return [] as any[];
 		const blockOrder = (id: string) => {
-			if (id === "M") return 6.5; // place M logically between 6 and 7
+			if (id === "M") return 6.5;
 			const n = Number(id);
-			return isNaN(n) ? 9999 : n; // non-numeric fallback goes to end
+			return isNaN(n) ? 9999 : n;
 		};
-		const entries = Object.entries(timetable).filter(([k]) => k !== "date");
+		const entries = Object.entries(dayData).filter(([k]) => k !== "date");
 		entries.sort((a, b) => blockOrder(a[0]) - blockOrder(b[0]));
 		return entries.map(([id, value]) => {
 			if (Array.isArray(value)) {
@@ -74,7 +95,6 @@ const Timetable = () => {
 					})),
 				};
 			}
-			// single object (likely free or a single slot with null lesson)
 			return {
 				id,
 				free: value && (value as any).lesson === null,
@@ -82,30 +102,58 @@ const Timetable = () => {
 				end: (value as any)?.endTime,
 			};
 		});
-	}, [timetable]);
+	};
 
-	// date helpers
-	const toISO = (d: Date) => d.toISOString().slice(0, 10); // yyyy-mm-dd
+	const blocks = React.useMemo(() => buildBlocks(timetable), [timetable]);
+
+	// week related helpers
+	const isoKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const getWeekDays = (d: Date) => {
+		const day = d.getDay(); // 0 Sun .. 6 Sat
+		const diffToMonday = (day + 6) % 7; // Monday ->0, Sunday ->6
+		const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffToMonday);
+		return [0, 1, 2, 3, 4].map((i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+	};
+	const weekDays = React.useMemo(() => (viewMode === "week" ? getWeekDays(selectedDate) : []), [viewMode, selectedDate]);
+	const formatWeekHeader = (days: Date[]) => {
+		if (!days.length) return "";
+		const first = days[0];
+		const last = days[days.length - 1];
+		const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+		return `${fmt(first)} - ${fmt(last)}`;
+	};
+
+	// date helpers (local timezone safe)
 	const addDays = (d: Date, days: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
 	const formatDisplay = (d: Date) => {
-		const iso = toISO(d);
-		const [y, m, day] = iso.split("-");
-		return `${day}.${m}.${y}`; // dd.mm.yyyy
+		const day = String(d.getDate()).padStart(2, "0");
+		const month = String(d.getMonth() + 1).padStart(2, "0");
+		const year = d.getFullYear();
+		return `${day}.${month}.${year}`; // dd.mm.yyyy
 	};
-	const isoToDisplay = (iso?: string) => {
-		if (!iso) return "";
-		const [y, m, d] = iso.split("-");
-		return `${d}.${m}.${y}`;
+	const formatDisplayShort = (d: Date) => {
+		const day = String(d.getDate()).padStart(2, "0");
+		const month = String(d.getMonth() + 1).padStart(2, "0");
+		return `${day}.${month}`; // dd.mm
 	};
-	const isSameDay = (a: Date, b: Date) => toISO(a) === toISO(b);
+	const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 	return (
-		<View style={styles.wrapper}>
-			<Text style={styles.heading}>Untis+</Text>
+		<View style={[sharedStyles.screen, styles.wrapper]}>
+			{/* Top bar spanning full width */}
+			<View style={styles.topBar}>
+				<Pressable accessibilityLabel="Neu laden" style={({ pressed }) => [styles.barBtn, pressed && styles.barBtnPressed]} onPress={() => fetchData()} disabled={loading}>
+					<Ionicons name="reload-outline" style={styles.barIcon} />
+				</Pressable>
+				<Text style={styles.barTitle}>Untis+</Text>
+				<Pressable accessibilityLabel="Ansicht umschalten" style={({ pressed }) => [styles.barBtn, pressed && styles.barBtnPressed]} onPress={() => setViewMode((m) => (m === "day" ? "week" : "day"))} disabled={loading}>
+					<Text style={styles.barSwitchText}>{viewMode === "day" ? "Woche" : "Tag"}</Text>
+				</Pressable>
+			</View>
 			<ScrollView style={styles.container} contentContainerStyle={styles.scrollInner}>
-				<View style={styles.headerRow}>
-					<Text style={styles.semiheading}>Mein Stundenplan</Text>
-				</View>
+				{/* <View style={styles.headerRow}>
+					<Text style={sharedStyles.semiHeading}>Mein Stundenplan</Text>
+				</View> */}
 				{/* Date selector */}
 				<View style={styles.dateSelector}>
 					<Pressable
@@ -118,7 +166,14 @@ const Timetable = () => {
 						<Text style={styles.dateBtnText}>{"<"}</Text>
 					</Pressable>
 					<View style={styles.dateDisplayWrap}>
-						<Text style={styles.dateDisplay}>{formatDisplay(selectedDate)}</Text>
+						{viewMode === "day" ? (
+							<Text style={styles.dateDisplay}>{formatDisplay(selectedDate)}</Text>
+						) : (
+							<View style={{ alignItems: "center" }}>
+								<Text style={styles.dateDisplay}>Woche</Text>
+								<Text style={styles.dateDisplayRange}>{formatWeekHeader(weekDays)}</Text>
+							</View>
+						)}
 						<Pressable
 							style={({ pressed }) => [styles.inlineSmallBtn, pressed && styles.inlineSmallBtnPressed]}
 							onPress={() => {
@@ -140,42 +195,103 @@ const Timetable = () => {
 						<Text style={styles.dateBtnText}>{">"}</Text>
 					</Pressable>
 				</View>
-				<View style={styles.actions}>
-					<Pressable style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]} onPress={() => fetchData()} disabled={loading}>
-						<Text style={styles.actionBtnText}>{loading ? "Aktualisiere..." : "Neu laden"}</Text>
-					</Pressable>
-					<Pressable style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]} onPress={() => setTimetable(null)}>
-						<Text style={styles.actionBtnText}>Leeren</Text>
-					</Pressable>
-				</View>
-
 				{error && <Text style={styles.error}>{error}</Text>}
 				{loading && !error && <ActivityIndicator style={{ marginVertical: 12 }} />}
 
 				{!loading &&
 					!error &&
-					blocks.map((block) => (
-						<View key={block.id} style={[styles.block, block.free && styles.blockFree]}>
-							<Text style={styles.blockTitle}>{block.id}</Text>
-							{block.free ? (
-								<Text style={styles.freeText}>
-									{formatTime(block.start)} - {formatTime(block.end)} Frei
-								</Text>
-							) : (
-								block.entries?.map((entry: any, i: number) => (
-									<View key={i} style={styles.lessonLine}>
-										<Text style={styles.time}>
-											{formatTime(entry.start)}-{formatTime(entry.end)}
+					viewMode === "day" &&
+					blocks.map((block) => {
+						const entries = block.entries || [];
+						const first = entries[0];
+						const extra = entries.length - 1;
+						return (
+							<View key={block.id} style={[styles.block, block.free && styles.blockFree]}>
+								<View style={styles.blockHeaderRow}>
+									<Text style={styles.blockTitle}>{block.id}</Text>
+									{!block.free && extra > 0 && <Text style={styles.moreIndicator}>+{extra}</Text>}
+								</View>
+								{block.free ? (
+									<Text style={styles.freeText} numberOfLines={2}>
+										{formatTime(block.start)} - {formatTime(block.end)} Frei
+									</Text>
+								) : first ? (
+									<View style={styles.lessonLine}>
+										<Text style={styles.time} numberOfLines={1}>
+											{formatTime(first.start)}-{formatTime(first.end)}
 										</Text>
-										<Text style={styles.subject}>{entry.subject}</Text>
-										<Text style={styles.meta}>{entry.teacher}</Text>
-										<Text style={styles.meta}>{entry.room}</Text>
-										{!!entry.klass && <Text style={styles.classText}>{entry.klass}</Text>}
+										<Text style={styles.subject} numberOfLines={1} ellipsizeMode="tail">
+											{first.subject}
+										</Text>
+										<Text style={styles.meta} numberOfLines={1}>
+											{first.teacher}
+										</Text>
+										<Text style={styles.meta} numberOfLines={1}>
+											{first.room}
+										</Text>
+										{!!first.klass && (
+											<Text style={styles.classText} numberOfLines={1}>
+												{first.klass}
+											</Text>
+										)}
 									</View>
-								))
-							)}
-						</View>
-					))}
+								) : null}
+							</View>
+						);
+					})}
+
+				{!loading && !error && viewMode === "week" && (
+					<View style={styles.weekView}>
+						{weekDays.map((d) => {
+							const iso = isoKey(d);
+							const dayData = timetableWeek?.[iso];
+							const dayBlocks = buildBlocks(dayData);
+							return (
+								<View key={iso} style={styles.weekDaySection}>
+									<Text style={styles.weekDayHeader}>{d.toLocaleDateString("de-DE", { weekday: "short" })}</Text>
+									<Text style={styles.weekDayHeaderMini}>{formatDisplayShort(d)}</Text>
+									{dayBlocks.length === 0 && <Text style={styles.freeText}>Keine Daten</Text>}
+									{dayBlocks.map((block) => {
+										const entries = block.entries || [];
+										const first = entries[0];
+										const extra = entries.length - 1;
+										// build time range for header (weekly view only)
+										let timeRange = "";
+										if (block.free && block.start && block.end) {
+											timeRange = `${formatTime(block.start)}-${formatTime(block.end)}`;
+										} else if (!block.free && first) {
+											timeRange = `${formatTime(first.start)}-${formatTime(first.end)}`;
+										}
+										return (
+											<View key={block.id} style={[styles.block, styles.blockUniform, styles.blockMin, block.free && styles.blockFree]}>
+												<Text style={styles.blockTitle}>{timeRange ? `${timeRange}` : ""}</Text>
+												{!block.free && extra > 0 && <Text style={styles.moreIndicator}>+{extra}</Text>}
+
+												{block.free ? (
+													<Text style={styles.freeText} numberOfLines={2}>
+														Frei
+													</Text>
+												) : first ? (
+													<View style={styles.lessonLine}>
+														<Text style={styles.subject} numberOfLines={1}>
+															{first.subject}
+														</Text>
+														<Text style={styles.meta} numberOfLines={1}>
+															{first.teacher}
+														</Text>
+														<Text style={styles.meta} numberOfLines={1}>
+															{first.room}
+														</Text>
+													</View>
+												) : null}
+											</View>
+										);
+									})}
+								</View>
+							);
+						})}
+					</View>
+				)}
 			</ScrollView>
 		</View>
 	);
@@ -186,7 +302,7 @@ export default Timetable;
 const styles = StyleSheet.create({
 	wrapper: {
 		flex: 1,
-		backgroundColor: "#fff",
+		paddingTop: 70,
 	},
 	container: {
 		padding: 10,
@@ -198,14 +314,16 @@ const styles = StyleSheet.create({
 	heading: {
 		fontSize: 30,
 		backgroundColor: "#fcba03",
-		padding: 10,
-		textAlign: "center",
+		padding: 20,
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "space-between",
 	},
 	semiheading: {
 		fontSize: 20,
 		padding: 10,
 		textAlign: "center",
-		marginBottom: 10,
+		marginBottom: 0,
 	},
 	button: {
 		fontSize: 15,
@@ -228,20 +346,19 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 	},
 	headerRow: {
-		marginBottom: 8,
+		marginBottom: 0,
 	},
 	actions: {
 		flexDirection: "row",
 		gap: 10,
-		marginBottom: 16,
+		marginBottom: 10,
 		flexWrap: "wrap",
 	},
 	actionBtn: {
-		backgroundColor: "#fcba03",
+		backgroundColor: "#ffcb3dff",
 		paddingHorizontal: 14,
 		paddingVertical: 8,
 		borderRadius: 6,
-		width: "48%",
 	},
 	actionBtnPressed: {
 		opacity: 0.65,
@@ -250,12 +367,16 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 		color: "#222",
 	},
+	actionBtnIcon: {
+		fontSize: 18,
+		color: "#222",
+	},
 	block: {
 		borderWidth: 1,
 		borderColor: "#e3e3e3",
 		borderRadius: 8,
 		padding: 10,
-		marginBottom: 12,
+		marginBottom: 5,
 		backgroundColor: "#fff",
 		shadowColor: "#000",
 		shadowOpacity: 0.05,
@@ -263,14 +384,32 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 2 },
 		elevation: 1,
 	},
+	blockUniform: {
+		height: 75,
+		justifyContent: "space-between",
+	},
+	blockMin: {
+		width: 75,
+	},
 	blockFree: {
 		backgroundColor: "#f6f6f6",
 		borderStyle: "dashed",
 	},
+	blockHeaderRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		marginBottom: 4,
+	},
 	blockTitle: {
-		fontSize: 16,
+		fontSize: 8,
 		fontWeight: "700",
-		marginBottom: 6,
+		marginBottom: 1,
+	},
+	moreIndicator: {
+		fontSize: 8,
+		fontWeight: "600",
+		color: "#555",
 	},
 	freeText: {
 		fontStyle: "italic",
@@ -284,12 +423,12 @@ const styles = StyleSheet.create({
 		color: "#333",
 	},
 	subject: {
-		fontSize: 14,
+		fontSize: 12,
 		fontWeight: "600",
 		color: "#111",
 	},
 	meta: {
-		fontSize: 12,
+		fontSize: 10,
 		color: "#444",
 	},
 	classText: {
@@ -301,8 +440,8 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 12,
-		marginBottom: 18,
+		gap: 30,
+		marginBottom: 10,
 	},
 	dateBtn: {
 		backgroundColor: "#fcba03",
@@ -316,12 +455,51 @@ const styles = StyleSheet.create({
 	dateBtnText: { fontWeight: "700", fontSize: 16, color: "#222" },
 	dateDisplayWrap: { alignItems: "center" },
 	dateDisplay: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
+	dateDisplayRange: { fontSize: 12, fontWeight: "500", opacity: 0.8 },
 	inlineSmallBtn: {
 		paddingHorizontal: 10,
 		paddingVertical: 4,
 		borderRadius: 6,
-		backgroundColor: "#eee",
+		backgroundColor: "#ffe18fff",
 	},
 	inlineSmallBtnPressed: { opacity: 0.6 },
 	inlineSmallBtnText: { fontSize: 12, fontWeight: "600" },
+	weekDaySection: { marginBottom: 24 },
+	weekDayHeader: { fontSize: 18, fontWeight: "700" },
+	weekDayHeaderMini: { fontSize: 12, marginBottom: 8 },
+	weekView: {
+		flex: 1,
+		flexDirection: "row",
+		gap: 5,
+	},
+	topBar: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		backgroundColor: "#fcba03",
+		paddingHorizontal: 12,
+		padding: 20,
+		elevation: 3,
+		shadowColor: "#000",
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		shadowOffset: { width: 0, height: 2 },
+		zIndex: 20,
+	},
+	barBtn: {
+		backgroundColor: "#ffdc6a",
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 8,
+		minWidth: 60,
+		alignItems: "center",
+	},
+	barBtnPressed: { opacity: 0.65 },
+	barIcon: { fontSize: 20, color: "#222", fontWeight: "600" },
+	barTitle: { fontSize: 30 },
+	barSwitchText: { fontSize: 14, fontWeight: "600", color: "#222" },
 });

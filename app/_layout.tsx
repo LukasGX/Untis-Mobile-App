@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native";
 const RootLayout = () => {
 	return (
 		<Stack>
+			<Stack.Screen name="login" options={{ headerShown: false }} />
 			<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 		</Stack>
 	);
@@ -19,7 +20,7 @@ const styles = StyleSheet.create({
 	heading: {
 		fontSize: 30,
 		backgroundColor: "#fcba03",
-		padding: 10,
+		padding: 20,
 		textAlign: "center",
 	},
 	semiheading: {
