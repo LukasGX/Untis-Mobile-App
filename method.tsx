@@ -3,10 +3,11 @@ import { WebUntis } from "webuntis";
 // React Native friendly version: no Node 'fs', no environment access, no interfaces.
 // All typing relaxed to 'any' so you can iterate quickly.
 
-export const realTimetable = async (untis: any, date: Date): Promise<any> => {
+export const realTimetable = async (untis: any, date: Date, useShortSubjectName: Boolean): Promise<any> => {
 	const timegridComplicated: any[] = await untis.getTimegrid();
 	const timegrid = timegridComplicated?.[0]?.timeUnits || [];
 	const timetable: any[] = await untis.getOwnTimetableFor(date);
+	const teachers: any[] = await untis.getTeachers();
 
 	const real: any = { date: date.toISOString().split("T")[0] };
 
@@ -27,8 +28,15 @@ export const realTimetable = async (untis: any, date: Date): Promise<any> => {
 				lesson: {
 					class: (lesson.kl || []).map((k: any) => k.longname),
 					teacher: (lesson.te || []).map((t: any) => t.longname),
-					subject: (lesson.su || []).map((s: any) => s.longname),
+					subject: (lesson.su || []).map((s: any) => (useShortSubjectName ? s.name : s.longname)),
 					room: (lesson.ro || []).map((r: any) => r.name),
+					code: lesson.code,
+					teacherOld: (lesson.te || []).map((t: any) => {
+						const teacherObj = teachers.find((teacher: any) => teacher.id === t.orgid);
+						return teacherObj ? teacherObj.longName : t.orgid;
+					}),
+					roomOld: (lesson.ro || []).map((r: any) => r.orgname),
+					subjectOld: (lesson.su || []).map((s: any) => s.orgid),
 				},
 			}));
 		}
