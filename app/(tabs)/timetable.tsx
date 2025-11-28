@@ -1,6 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	Modal,
+	Platform,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	View
+} from "react-native";
 import { createUntis, realTimetable } from "../../method";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
@@ -12,7 +21,10 @@ const initialDate = new Date();
 
 const Timetable = () => {
 	const [timetable, setTimetable] = useState<any | null>(null);
-	const [timetableWeek, setTimetableWeek] = useState<Record<string, any> | null>(null);
+	const [timetableWeek, setTimetableWeek] = useState<Record<
+		string,
+		any
+	> | null>(null);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
@@ -34,7 +46,12 @@ const Timetable = () => {
 					setTimetableWeek(null);
 					return;
 				}
-				const untis = createUntis(stored.school, stored.user, stored.password, stored.host);
+				const untis = createUntis(
+					stored.school,
+					stored.user,
+					stored.password,
+					stored.host
+				);
 				await untis.login();
 				const dateToUse = dateOverride || selectedDate;
 				if (viewMode === "day") {
@@ -45,7 +62,10 @@ const Timetable = () => {
 					const weekDays = getWeekDays(dateToUse);
 					const results = await Promise.all(
 						weekDays.map(async (d) => {
-							return { iso: isoKey(d), data: await realTimetable(untis, d, true) };
+							return {
+								iso: isoKey(d),
+								data: await realTimetable(untis, d, true)
+							};
 						})
 					);
 					const map: Record<string, any> = {};
@@ -97,10 +117,12 @@ const Timetable = () => {
 						klass: (v.lesson?.class || []).join(", ") || "",
 						klassList: v.lesson?.class || [],
 						code: v.lesson?.code || "",
-						teacherOld: (v.lesson?.teacherOld || []).join(", ") || "",
+						teacherOld:
+							(v.lesson?.teacherOld || []).join(", ") || "",
 						roomOld: (v.lesson?.roomOld || []).join(", ") || "",
-						subjectOld: (v.lesson?.subjectOld || []).join(", ") || "",
-					})),
+						subjectOld:
+							(v.lesson?.subjectOld || []).join(", ") || ""
+					}))
 				};
 			}
 			return {
@@ -108,7 +130,7 @@ const Timetable = () => {
 				free: value && (value as any).lesson === null,
 				start: (value as any)?.startTime,
 				end: (value as any)?.endTime,
-				code: "",
+				code: ""
 			};
 		});
 	};
@@ -117,28 +139,49 @@ const Timetable = () => {
 
 	// Daily index/time data (for left column in day view)
 	const dayIndexData = React.useMemo(() => {
-		if (viewMode !== "day" || !blocks) return [] as { id: string; timeRange: string }[];
+		if (viewMode !== "day" || !blocks)
+			return [] as { id: string; timeRange: string }[];
 		return blocks.map((b: any) => {
 			let timeRange = "";
 			if (b.free && b.start && b.end) {
 				timeRange = `${formatTime(b.start)}-${formatTime(b.end)}`;
 			} else if (!b.free && b.entries && b.entries[0]) {
 				const first = b.entries[0];
-				timeRange = `${formatTime(first.start)}-${formatTime(first.end)}`;
+				timeRange = `${formatTime(first.start)}-${formatTime(
+					first.end
+				)}`;
 			}
 			return { id: b.id, timeRange };
 		});
 	}, [viewMode, blocks]);
 
 	// week related helpers
-	const isoKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const isoKey = (d: Date) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+			2,
+			"0"
+		)}-${String(d.getDate()).padStart(2, "0")}`;
 	const getWeekDays = (d: Date) => {
 		const day = d.getDay(); // 0 Sun .. 6 Sat
 		const diffToMonday = (day + 6) % 7; // Monday ->0, Sunday ->6
-		const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffToMonday);
-		return [0, 1, 2, 3, 4].map((i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+		const monday = new Date(
+			d.getFullYear(),
+			d.getMonth(),
+			d.getDate() - diffToMonday
+		);
+		return [0, 1, 2, 3, 4].map(
+			(i) =>
+				new Date(
+					monday.getFullYear(),
+					monday.getMonth(),
+					monday.getDate() + i
+				)
+		);
 	};
-	const weekDays = React.useMemo(() => (viewMode === "week" ? getWeekDays(selectedDate) : []), [viewMode, selectedDate]);
+	const weekDays = React.useMemo(
+		() => (viewMode === "week" ? getWeekDays(selectedDate) : []),
+		[viewMode, selectedDate]
+	);
 	// Weekly structure (index/time column + per-day aligned blocks)
 	const weekStructure = React.useMemo(() => {
 		if (viewMode !== "week" || !timetableWeek) return null;
@@ -154,18 +197,24 @@ const Timetable = () => {
 		});
 		const idSet = new Set<string>();
 		perDay.forEach((day) => day.blocks.forEach((b) => idSet.add(b.id)));
-		const orderedIds = Array.from(idSet).sort((a, b) => blockOrder(a) - blockOrder(b));
+		const orderedIds = Array.from(idSet).sort(
+			(a, b) => blockOrder(a) - blockOrder(b)
+		);
 		const indexData = orderedIds.map((id) => {
 			let timeRange = "";
 			for (const day of perDay) {
 				const blk = day.blocks.find((b) => b.id === id);
 				if (blk) {
 					if (blk.free && blk.start && blk.end) {
-						timeRange = `${formatTime(blk.start)}-${formatTime(blk.end)}`;
+						timeRange = `${formatTime(blk.start)}-${formatTime(
+							blk.end
+						)}`;
 						break;
 					} else if (!blk.free && blk.entries && blk.entries[0]) {
 						const first = blk.entries[0];
-						timeRange = `${formatTime(first.start)}-${formatTime(first.end)}`;
+						timeRange = `${formatTime(first.start)}-${formatTime(
+							first.end
+						)}`;
 						break;
 					}
 				}
@@ -178,12 +227,16 @@ const Timetable = () => {
 		if (!days.length) return "";
 		const first = days[0];
 		const last = days[days.length - 1];
-		const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+		const fmt = (d: Date) =>
+			`${String(d.getDate()).padStart(2, "0")}.${String(
+				d.getMonth() + 1
+			).padStart(2, "0")}.${d.getFullYear()}`;
 		return `${fmt(first)} - ${fmt(last)}`;
 	};
 
 	// date helpers (local timezone safe)
-	const addDays = (d: Date, days: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+	const addDays = (d: Date, days: number) =>
+		new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
 	const formatDisplay = (d: Date) => {
 		const day = String(d.getDate()).padStart(2, "0");
 		const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -195,7 +248,10 @@ const Timetable = () => {
 		const month = String(d.getMonth() + 1).padStart(2, "0");
 		return `${day}.${month}`; // dd.mm
 	};
-	const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+	const isSameDay = (a: Date, b: Date) =>
+		a.getFullYear() === b.getFullYear() &&
+		a.getMonth() === b.getMonth() &&
+		a.getDate() === b.getDate();
 
 	// Fetch fresh data for a single block when opening details
 	const openLesson = useCallback(
@@ -210,7 +266,12 @@ const Timetable = () => {
 					setDetailLoading(false);
 					return;
 				}
-				const untis = createUntis(stored.school, stored.user, stored.password, stored.host);
+				const untis = createUntis(
+					stored.school,
+					stored.user,
+					stored.password,
+					stored.host
+				);
 				await untis.login();
 				const freshDay = await realTimetable(untis, date, false);
 				const freshBlocks = buildBlocks(freshDay);
@@ -220,7 +281,10 @@ const Timetable = () => {
 				} else if (target.free) {
 					setSelectedLesson({ id: blockId, entries: [], free: true });
 				} else {
-					setSelectedLesson({ id: blockId, entries: target.entries || [] });
+					setSelectedLesson({
+						id: blockId,
+						entries: target.entries || []
+					});
 				}
 			} catch (e: any) {
 				setDetailError(e?.message || "Fehler beim Laden");
@@ -236,27 +300,66 @@ const Timetable = () => {
 			{/* Top bar spanning full width */}
 			<View style={styles.topBar}>
 				<View style={styles.leftBarGroup}>
-					<Pressable accessibilityLabel="Neu laden" style={({ pressed }) => [styles.barBtn, pressed && styles.barBtnPressed]} onPress={() => fetchData()} disabled={loading}>
-						<Ionicons name="reload-outline" style={styles.barIcon} />
+					<Pressable
+						accessibilityLabel="Neu laden"
+						style={({ pressed }) => [
+							styles.barBtn,
+							pressed && styles.barBtnPressed
+						]}
+						onPress={() => fetchData()}
+						disabled={loading}>
+						<Ionicons
+							name="reload-outline"
+							style={styles.barIcon}
+						/>
 					</Pressable>
-					<Pressable accessibilityLabel="Datum auswählen" style={({ pressed }) => [styles.barBtn, pressed && styles.barBtnPressed]} onPress={() => setShowDateModal(true)} disabled={loading}>
-						<Ionicons name="calendar-outline" style={styles.barIcon} />
+					<Pressable
+						accessibilityLabel="Datum auswählen"
+						style={({ pressed }) => [
+							styles.barBtn,
+							pressed && styles.barBtnPressed
+						]}
+						onPress={() => setShowDateModal(true)}
+						disabled={loading}>
+						<Ionicons
+							name="calendar-outline"
+							style={styles.barIcon}
+						/>
 					</Pressable>
 				</View>
 				<Text style={styles.barTitle}>Untis+</Text>
-				<Pressable accessibilityLabel="Ansicht umschalten" style={({ pressed }) => [styles.barBtn, pressed && styles.barBtnPressed]} onPress={() => setViewMode((m) => (m === "day" ? "week" : "day"))} disabled={loading}>
-					<Text style={styles.barSwitchText}>{viewMode === "day" ? "Woche" : "Tag"}</Text>
+				<Pressable
+					accessibilityLabel="Ansicht umschalten"
+					style={({ pressed }) => [
+						styles.barBtn,
+						pressed && styles.barBtnPressed
+					]}
+					onPress={() =>
+						setViewMode((m) => (m === "day" ? "week" : "day"))
+					}
+					disabled={loading}>
+					<Text style={styles.barSwitchText}>
+						{viewMode === "day" ? "Woche" : "Tag"}
+					</Text>
 				</Pressable>
 			</View>
 
 			{/* Date Selector Modal */}
-			<Modal visible={showDateModal} transparent animationType="fade" onRequestClose={() => setShowDateModal(false)}>
+			<Modal
+				visible={showDateModal}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setShowDateModal(false)}>
 				<View style={styles.modalBackdrop}>
 					<View style={styles.modalCard}>
 						<Text style={styles.modalTitle}>Datum wählen</Text>
-						<View style={[styles.dateSelector, { marginBottom: 0 }]}>
+						<View
+							style={[styles.dateSelector, { marginBottom: 0 }]}>
 							<Pressable
-								style={({ pressed }) => [styles.dateBtn, pressed && styles.dateBtnPressed]}
+								style={({ pressed }) => [
+									styles.dateBtn,
+									pressed && styles.dateBtnPressed
+								]}
 								onPress={() => {
 									const d = addDays(selectedDate, -1);
 									setSelectedDate(d);
@@ -266,25 +369,40 @@ const Timetable = () => {
 							</Pressable>
 							<View style={styles.dateDisplayWrap}>
 								{viewMode === "day" ? (
-									<Text style={styles.dateDisplay}>{formatDisplay(selectedDate)}</Text>
+									<Text style={styles.dateDisplay}>
+										{formatDisplay(selectedDate)}
+									</Text>
 								) : (
 									<View style={{ alignItems: "center" }}>
-										<Text style={styles.dateDisplay}>Woche</Text>
-										<Text style={styles.dateDisplayRange}>{formatWeekHeader(weekDays)}</Text>
+										<Text style={styles.dateDisplay}>
+											Woche
+										</Text>
+										<Text style={styles.dateDisplayRange}>
+											{formatWeekHeader(weekDays)}
+										</Text>
 									</View>
 								)}
 								<Pressable
-									style={({ pressed }) => [styles.inlineSmallBtn, pressed && styles.inlineSmallBtnPressed]}
+									style={({ pressed }) => [
+										styles.inlineSmallBtn,
+										pressed && styles.inlineSmallBtnPressed
+									]}
 									onPress={() => {
 										const today = new Date();
-										if (!isSameDay(today, selectedDate)) setSelectedDate(today);
+										if (!isSameDay(today, selectedDate))
+											setSelectedDate(today);
 									}}
 									disabled={loading}>
-									<Text style={styles.inlineSmallBtnText}>Heute</Text>
+									<Text style={styles.inlineSmallBtnText}>
+										Heute
+									</Text>
 								</Pressable>
 							</View>
 							<Pressable
-								style={({ pressed }) => [styles.dateBtn, pressed && styles.dateBtnPressed]}
+								style={({ pressed }) => [
+									styles.dateBtn,
+									pressed && styles.dateBtnPressed
+								]}
 								onPress={() => {
 									const d = addDays(selectedDate, 1);
 									setSelectedDate(d);
@@ -294,115 +412,249 @@ const Timetable = () => {
 							</Pressable>
 						</View>
 						<View style={styles.modalActions}>
-							<Pressable style={({ pressed }) => [styles.modalBtn, pressed && styles.modalBtnPressed]} onPress={() => setShowDateModal(false)}>
-								<Text style={styles.modalBtnText}>Schließen</Text>
+							<Pressable
+								style={({ pressed }) => [
+									styles.modalBtn,
+									pressed && styles.modalBtnPressed
+								]}
+								onPress={() => setShowDateModal(false)}>
+								<Text style={styles.modalBtnText}>
+									Schließen
+								</Text>
 							</Pressable>
 						</View>
 					</View>
 				</View>
 			</Modal>
 			{/* Lesson Detail Modal (fresh fetch) */}
-			<Modal visible={!!selectedLesson} transparent animationType="fade" onRequestClose={() => setSelectedLesson(null)}>
+			<Modal
+				visible={!!selectedLesson}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setSelectedLesson(null)}>
 				<View style={styles.modalBackdrop}>
 					<View style={styles.modalCard}>
-						<Text style={styles.modalTitle}>Details - {selectedLesson?.id}. Stunde</Text>
-						{detailLoading && <ActivityIndicator style={{ marginVertical: 8 }} />}
-						{detailError && !detailLoading && <Text style={[styles.detailMeta, { color: "#b00020" }]}>{detailError}</Text>}
+						<Text style={styles.modalTitle}>
+							Details - {selectedLesson?.id}. Stunde
+						</Text>
+						{detailLoading && (
+							<ActivityIndicator style={{ marginVertical: 8 }} />
+						)}
+						{detailError && !detailLoading && (
+							<Text
+								style={[
+									styles.detailMeta,
+									{ color: "#b00020" }
+								]}>
+								{detailError}
+							</Text>
+						)}
 						{!detailLoading && !detailError && (
-							<ScrollView style={{ maxHeight: 300 }} contentContainerStyle={{ gap: 8 }}>
-								{selectedLesson?.free && <Text style={styles.detailMeta}>Frei</Text>}
-								{selectedLesson?.entries?.map((e: any, idx: number) => (
-									<View key={idx} style={styles.detailEntry}>
-										{/* Badges for cancellation or changes */}
-										{e.code === "cancelled" ? <Text style={[styles.cancelledBadge, styles.detailBadge]}>ENTFÄLLT</Text> : e.roomOld || e.subjectOld || e.teacherOld ? <Text style={[styles.changeBadge, styles.detailBadge]}>ÄNDERUNG</Text> : null}
-										<Text style={styles.detailTime}>
-											{formatTime(e.start)} - {formatTime(e.end)}
-										</Text>
-										<Text style={styles.detailSubject}>
-											{e.subjectOld && e.subjectOld !== e.subject ? (
-												<Text>
-													<Text style={[styles.detailSubject, styles.subjectOld]}>{e.subjectOld}</Text>
-													<Text> {e.subject}</Text>
+							<ScrollView
+								style={{ maxHeight: 300 }}
+								contentContainerStyle={{ gap: 8 }}>
+								{selectedLesson?.free && (
+									<Text style={styles.detailMeta}>Frei</Text>
+								)}
+								{selectedLesson?.entries?.map(
+									(e: any, idx: number) => (
+										<View
+											key={idx}
+											style={styles.detailEntry}>
+											{/* Badges for cancellation or changes */}
+											{e.code === "cancelled" ? (
+												<Text
+													style={[
+														styles.cancelledBadge,
+														styles.detailBadge
+													]}>
+													ENTFÄLLT
 												</Text>
-											) : (
-												e.subject
-											)}
-										</Text>
-										<View style={styles.detailMetaRow}>
-											<Text style={styles.detailMeta}>
-												Lehrer:{" "}
-												{e.teacherOld && e.teacherOld !== e.teacher ? (
+											) : e.roomOld ||
+											  e.subjectOld ||
+											  e.teacherOld ? (
+												<Text
+													style={[
+														styles.changeBadge,
+														styles.detailBadge
+													]}>
+													ÄNDERUNG
+												</Text>
+											) : null}
+											<Text style={styles.detailTime}>
+												{formatTime(e.start)} -{" "}
+												{formatTime(e.end)}
+											</Text>
+											<Text style={styles.detailSubject}>
+												{e.subjectOld &&
+												e.subjectOld !== e.subject ? (
 													<Text>
-														<Text style={styles.metaOld}>{e.teacherOld}</Text>
-														<Text> {e.teacher}</Text>
+														<Text
+															style={[
+																styles.detailSubject,
+																styles.subjectOld
+															]}>
+															{e.subjectOld}
+														</Text>
+														<Text>
+															{" "}
+															{e.subject}
+														</Text>
 													</Text>
 												) : (
-													e.teacher
+													e.subject
 												)}
 											</Text>
-										</View>
-										<View style={styles.detailMetaRow}>
-											<Text style={styles.detailMeta}>
-												Raum:{" "}
-												{e.roomOld && e.roomOld !== e.room ? (
-													<Text>
-														<Text style={styles.metaOld}>{e.roomOld}</Text>
-														<Text> {e.room}</Text>
-													</Text>
-												) : (
-													e.room
-												)}
-											</Text>
-										</View>
-										{!!e.klass && (
 											<View style={styles.detailMetaRow}>
 												<Text style={styles.detailMeta}>
-													{(e.klassList?.length || 0) > 1 ? "Klassen:" : "Klasse:"} {e.klass}
+													Lehrer:{" "}
+													{e.teacherOld &&
+													e.teacherOld !==
+														e.teacher ? (
+														<Text>
+															<Text
+																style={
+																	styles.metaOld
+																}>
+																{e.teacherOld}
+															</Text>
+															<Text>
+																{" "}
+																{e.teacher}
+															</Text>
+														</Text>
+													) : (
+														e.teacher
+													)}
 												</Text>
 											</View>
-										)}
-									</View>
-								))}
-								{!selectedLesson?.entries?.length && !selectedLesson?.free && <Text style={styles.detailMeta}>Keine Daten</Text>}
+											<View style={styles.detailMetaRow}>
+												<Text style={styles.detailMeta}>
+													Raum:{" "}
+													{e.roomOld &&
+													e.roomOld !== e.room ? (
+														<Text>
+															<Text
+																style={
+																	styles.metaOld
+																}>
+																{e.roomOld}
+															</Text>
+															<Text>
+																{" "}
+																{e.room}
+															</Text>
+														</Text>
+													) : (
+														e.room
+													)}
+												</Text>
+											</View>
+											{!!e.klass && (
+												<View
+													style={
+														styles.detailMetaRow
+													}>
+													<Text
+														style={
+															styles.detailMeta
+														}>
+														{(e.klassList?.length ||
+															0) > 1
+															? "Klassen:"
+															: "Klasse:"}{" "}
+														{e.klass}
+													</Text>
+												</View>
+											)}
+										</View>
+									)
+								)}
+								{!selectedLesson?.entries?.length &&
+									!selectedLesson?.free && (
+										<Text style={styles.detailMeta}>
+											Keine Daten
+										</Text>
+									)}
 							</ScrollView>
 						)}
 						<View style={styles.modalActions}>
-							<Pressable style={({ pressed }) => [styles.modalBtn, pressed && styles.modalBtnPressed]} onPress={() => setSelectedLesson(null)}>
-								<Text style={styles.modalBtnText}>Schließen</Text>
+							<Pressable
+								style={({ pressed }) => [
+									styles.modalBtn,
+									pressed && styles.modalBtnPressed
+								]}
+								onPress={() => setSelectedLesson(null)}>
+								<Text style={styles.modalBtnText}>
+									Schließen
+								</Text>
 							</Pressable>
 						</View>
 					</View>
 				</View>
 			</Modal>
-			<ScrollView style={styles.container} contentContainerStyle={styles.scrollInner}>
+			<ScrollView
+				style={styles.container}
+				contentContainerStyle={styles.scrollInner}>
 				{/* <View style={styles.headerRow}>
 					<Text style={sharedStyles.semiHeading}>Mein Stundenplan</Text>
 				</View> */}
 				{/* Date selector moved to modal */}
 				{error && <Text style={styles.error}>{error}</Text>}
-				{loading && !error && <ActivityIndicator style={{ marginVertical: 12 }} />}
+				{loading && !error && (
+					<ActivityIndicator style={{ marginVertical: 12 }} />
+				)}
 
 				{!loading && !error && viewMode === "day" && (
 					<View style={styles.dayView}>
 						{/* Index/Time Column (Day) */}
-						<View style={[styles.weekDaySection, styles.weekIndexCol, styles.dayIndexCol]}>
+						<View
+							style={[
+								styles.weekDaySection,
+								styles.weekIndexCol,
+								styles.dayIndexCol
+							]}>
 							{dayIndexData.map((idx) => (
-								<View key={idx.id} style={[styles.block, styles.dayBlockUniform, styles.indexBlock]}>
-									<Text style={styles.indexBlockTitle}>{idx.id}</Text>
+								<View
+									key={idx.id}
+									style={[
+										styles.block,
+										styles.dayBlockUniform,
+										styles.indexBlock
+									]}>
+									<Text style={styles.indexBlockTitle}>
+										{idx.id}
+									</Text>
 									{idx.timeRange ? (
 										(() => {
-											const parts = idx.timeRange.split("-");
+											const parts =
+												idx.timeRange.split("-");
 											const start = parts[0] || "";
 											const end = parts[1] || "";
 											return (
-												<View style={{ alignItems: "center" }}>
-													<Text style={styles.indexBlockTime}>{start}</Text>
-													<Text style={styles.indexBlockTime}>{end}</Text>
+												<View
+													style={{
+														alignItems: "center"
+													}}>
+													<Text
+														style={
+															styles.indexBlockTime
+														}>
+														{start}
+													</Text>
+													<Text
+														style={
+															styles.indexBlockTime
+														}>
+														{end}
+													</Text>
 												</View>
 											);
 										})()
 									) : (
-										<Text style={styles.indexBlockTime}> </Text>
+										<Text style={styles.indexBlockTime}>
+											{" "}
+										</Text>
 									)}
 								</View>
 							))}
@@ -413,42 +665,119 @@ const Timetable = () => {
 								const entries = block.entries || [];
 								const first = entries[0];
 								const extra = entries.length - 1;
-								const cancelled = block.code === "cancelled" || (first && first.code === "cancelled");
-								const someChange = entries.some((e: any) => e.roomOld || e.subjectOld || e.teacherOld);
+								const cancelled =
+									block.code === "cancelled" ||
+									(first && first.code === "cancelled");
+								const someChange = entries.some(
+									(e: any) =>
+										e.roomOld ||
+										e.subjectOld ||
+										e.teacherOld
+								);
 								return (
-									<Pressable key={block.id} style={({ pressed }) => [styles.block, styles.dayBlockUniform, block.free && styles.blockFree, pressed && !block.free && styles.blockPressed, cancelled && styles.blockCancelled, someChange && styles.blockChanged]} disabled={block.free || !entries.length} onPress={() => openLesson(block.id, selectedDate)}>
+									<Pressable
+										key={block.id}
+										style={({ pressed }) => [
+											styles.block,
+											styles.dayBlockUniform,
+											block.free && styles.blockFree,
+											pressed &&
+												!block.free &&
+												styles.blockPressed,
+											cancelled && styles.blockCancelled,
+											someChange && styles.blockChanged
+										]}
+										disabled={block.free || !entries.length}
+										onPress={() =>
+											openLesson(block.id, selectedDate)
+										}>
 										{block.free ? (
-											<Text style={styles.freeText} numberOfLines={2}>
+											<Text
+												style={styles.freeText}
+												numberOfLines={2}>
 												Frei
 											</Text>
 										) : first ? (
 											<View style={styles.lessonLine}>
-												<Text style={[styles.subject, cancelled && styles.subjectCancelled]} numberOfLines={1} ellipsizeMode="tail">
+												<Text
+													style={[
+														styles.subject,
+														cancelled &&
+															styles.subjectCancelled
+													]}
+													numberOfLines={1}
+													ellipsizeMode="tail">
 													{first.subjectOld && (
 														<Text>
-															<Text style={[styles.meta, styles.subjectOld, cancelled && styles.metaCancelled]} numberOfLines={1} ellipsizeMode="tail">
-																{first.subjectOld}
+															<Text
+																style={[
+																	styles.meta,
+																	styles.subjectOld,
+																	cancelled &&
+																		styles.metaCancelled
+																]}
+																numberOfLines={
+																	1
+																}
+																ellipsizeMode="tail">
+																{
+																	first.subjectOld
+																}
 															</Text>
 															<Text> </Text>
 														</Text>
 													)}
 													{first.subject}
 												</Text>
-												<Text style={[styles.meta, cancelled && styles.metaCancelled]} numberOfLines={1}>
+												<Text
+													style={[
+														styles.meta,
+														cancelled &&
+															styles.metaCancelled
+													]}
+													numberOfLines={1}>
 													{first.teacherOld && (
 														<Text>
-															<Text style={[styles.meta, styles.metaOld, cancelled && styles.metaCancelled]} numberOfLines={1} ellipsizeMode="tail">
-																{first.teacherOld}
+															<Text
+																style={[
+																	styles.meta,
+																	styles.metaOld,
+																	cancelled &&
+																		styles.metaCancelled
+																]}
+																numberOfLines={
+																	1
+																}
+																ellipsizeMode="tail">
+																{
+																	first.teacherOld
+																}
 															</Text>
 															<Text> </Text>
 														</Text>
 													)}
 													{first.teacher}
 												</Text>
-												<Text style={[styles.meta, cancelled && styles.metaCancelled]} numberOfLines={1}>
+												<Text
+													style={[
+														styles.meta,
+														cancelled &&
+															styles.metaCancelled
+													]}
+													numberOfLines={1}>
 													{first.roomOld && (
 														<Text>
-															<Text style={[styles.meta, styles.metaOld, cancelled && styles.metaCancelled]} numberOfLines={1} ellipsizeMode="tail">
+															<Text
+																style={[
+																	styles.meta,
+																	styles.metaOld,
+																	cancelled &&
+																		styles.metaCancelled
+																]}
+																numberOfLines={
+																	1
+																}
+																ellipsizeMode="tail">
 																{first.roomOld}
 															</Text>
 															<Text> </Text>
@@ -458,8 +787,16 @@ const Timetable = () => {
 												</Text>
 											</View>
 										) : null}
-										{cancelled && <Text style={styles.cancelledBadge}>ENTFÄLLT</Text>}
-										{someChange && <Text style={styles.changeBadge}>ÄNDERUNG</Text>}
+										{cancelled && (
+											<Text style={styles.cancelledBadge}>
+												ENTFÄLLT
+											</Text>
+										)}
+										{someChange && (
+											<Text style={styles.changeBadge}>
+												ÄNDERUNG
+											</Text>
+										)}
 									</Pressable>
 								);
 							})}
@@ -470,26 +807,60 @@ const Timetable = () => {
 				{!loading && !error && viewMode === "week" && weekStructure && (
 					<View style={styles.weekView}>
 						{/* Index/Time Column */}
-						<View style={[styles.weekDaySection, styles.weekIndexCol]}>
-							<Text style={[styles.weekDayHeader, styles.indexHeaderText]}>&nbsp;</Text>
+						<View
+							style={[
+								styles.weekDaySection,
+								styles.weekIndexCol
+							]}>
+							<Text
+								style={[
+									styles.weekDayHeader,
+									styles.indexHeaderText
+								]}>
+								&nbsp;
+							</Text>
 							<Text style={styles.weekDayHeaderMini}>&nbsp;</Text>
 							{weekStructure.indexData.map((idx) => (
-								<View key={idx.id} style={[styles.block, styles.blockUniform, styles.indexBlock]}>
-									<Text style={styles.indexBlockTitle}>{idx.id}</Text>
+								<View
+									key={idx.id}
+									style={[
+										styles.block,
+										styles.blockUniform,
+										styles.indexBlock
+									]}>
+									<Text style={styles.indexBlockTitle}>
+										{idx.id}
+									</Text>
 									{idx.timeRange ? (
 										(() => {
-											const parts = idx.timeRange.split("-");
+											const parts =
+												idx.timeRange.split("-");
 											const start = parts[0] || "";
 											const end = parts[1] || "";
 											return (
-												<View style={{ alignItems: "center" }}>
-													<Text style={styles.indexBlockTime}>{start}</Text>
-													<Text style={styles.indexBlockTime}>{end}</Text>
+												<View
+													style={{
+														alignItems: "center"
+													}}>
+													<Text
+														style={
+															styles.indexBlockTime
+														}>
+														{start}
+													</Text>
+													<Text
+														style={
+															styles.indexBlockTime
+														}>
+														{end}
+													</Text>
 												</View>
 											);
 										})()
 									) : (
-										<Text style={styles.indexBlockTime}> </Text>
+										<Text style={styles.indexBlockTime}>
+											{" "}
+										</Text>
 									)}
 								</View>
 							))}
@@ -497,14 +868,34 @@ const Timetable = () => {
 						{/* Day Columns */}
 						{weekStructure.perDay.map((day) => (
 							<View key={day.iso} style={styles.weekDaySection}>
-								<Text style={styles.weekDayHeader}>{day.date.toLocaleDateString("de-DE", { weekday: "short" })}</Text>
-								<Text style={styles.weekDayHeaderMini}>{formatDisplayShort(day.date)}</Text>
+								<Text style={styles.weekDayHeader}>
+									{day.date.toLocaleDateString("de-DE", {
+										weekday: "short"
+									})}
+								</Text>
+								<Text style={styles.weekDayHeaderMini}>
+									{formatDisplayShort(day.date)}
+								</Text>
 								{weekStructure.indexData.map((idx) => {
-									const block = day.blocks.find((b) => b.id === idx.id);
+									const block = day.blocks.find(
+										(b) => b.id === idx.id
+									);
 									if (!block) {
 										return (
-											<View key={idx.id} style={[styles.block, styles.blockUniform, styles.blockMin, styles.blockPlaceholder]}>
-												<Text style={styles.placeholderText}>--</Text>
+											<View
+												key={idx.id}
+												style={[
+													styles.block,
+													styles.blockUniform,
+													styles.blockMin,
+													styles.blockPlaceholder
+												]}>
+												<Text
+													style={
+														styles.placeholderText
+													}>
+													--
+												</Text>
 											</View>
 										);
 									}
@@ -515,40 +906,136 @@ const Timetable = () => {
 										<Pressable
 											key={block.id}
 											style={({ pressed }) => {
-												const cancelled = block.code === "cancelled" || (first && first.code === "cancelled");
-												const someChange = entries.some((e: any) => e.roomOld || e.subjectOld || e.teacherOld);
-												return [styles.block, styles.blockUniform, styles.blockMin, block.free && styles.blockFree, pressed && !block.free && styles.blockPressed, cancelled && styles.blockCancelled, someChange && styles.blockChanged];
+												const cancelled =
+													block.code ===
+														"cancelled" ||
+													(first &&
+														first.code ===
+															"cancelled");
+												const someChange = entries.some(
+													(e: any) =>
+														e.roomOld ||
+														e.subjectOld ||
+														e.teacherOld
+												);
+												return [
+													styles.block,
+													styles.blockUniform,
+													styles.blockMin,
+													block.free &&
+														styles.blockFree,
+													pressed &&
+														!block.free &&
+														styles.blockPressed,
+													cancelled &&
+														styles.blockCancelled,
+													someChange &&
+														styles.blockChanged
+												];
 											}}
-											disabled={block.free || !entries.length}
-											onPress={() => openLesson(block.id, day.date)}>
+											disabled={
+												block.free || !entries.length
+											}
+											onPress={() =>
+												openLesson(block.id, day.date)
+											}>
 											{block.free ? (
-												<Text style={styles.freeText} numberOfLines={2}>
+												<Text
+													style={styles.freeText}
+													numberOfLines={2}>
 													Frei
 												</Text>
 											) : first ? (
 												<View style={styles.lessonLine}>
-													<Text style={[styles.subject, (block.code === "cancelled" || (first && first.code === "cancelled")) && styles.subjectCancelled, first.subjectOld && styles.subjectChanged]} numberOfLines={1}>
+													<Text
+														style={[
+															styles.subject,
+															(block.code ===
+																"cancelled" ||
+																(first &&
+																	first.code ===
+																		"cancelled")) &&
+																styles.subjectCancelled,
+															first.subjectOld &&
+																styles.subjectChanged
+														]}
+														numberOfLines={1}>
 														{first.subject}
 													</Text>
-													<Text style={[styles.meta, (block.code === "cancelled" || (first && first.code === "cancelled")) && styles.metaCancelled, first.teacherOld && styles.metaChanged]} numberOfLines={1}>
+													<Text
+														style={[
+															styles.meta,
+															(block.code ===
+																"cancelled" ||
+																(first &&
+																	first.code ===
+																		"cancelled")) &&
+																styles.metaCancelled,
+															first.teacherOld &&
+																styles.metaChanged
+														]}
+														numberOfLines={1}>
 														{first.teacher}
 													</Text>
-													<Text style={[styles.meta, (block.code === "cancelled" || (first && first.code === "cancelled")) && styles.metaCancelled, first.roomOld && styles.metaChanged]} numberOfLines={1}>
+													<Text
+														style={[
+															styles.meta,
+															(block.code ===
+																"cancelled" ||
+																(first &&
+																	first.code ===
+																		"cancelled")) &&
+																styles.metaCancelled,
+															first.roomOld &&
+																styles.metaChanged
+														]}
+														numberOfLines={1}>
 														{first.room}
 													</Text>
 												</View>
 											) : null}
-											{(block.code === "cancelled" || (first && first.code === "cancelled")) && (
-												<Text style={[styles.cancelledBadge]}>
-													<Ionicons name="ban" style={[styles.smallBadge]} />
+											{(block.code === "cancelled" ||
+												(first &&
+													first.code ===
+														"cancelled")) && (
+												<Text
+													style={[
+														styles.cancelledBadge
+													]}>
+													<Ionicons
+														name="ban"
+														style={[
+															styles.smallBadge
+														]}
+													/>
 												</Text>
 											)}
-											{entries.some((e: any) => e.roomOld || e.subjectOld || e.teacherOld) && (
-												<Text style={[styles.changeBadge]}>
-													<Ionicons name="swap-horizontal" style={[styles.smallBadge]} />
+											{entries.some(
+												(e: any) =>
+													e.roomOld ||
+													e.subjectOld ||
+													e.teacherOld
+											) && (
+												<Text
+													style={[
+														styles.changeBadge
+													]}>
+													<Ionicons
+														name="swap-horizontal"
+														style={[
+															styles.smallBadge
+														]}
+													/>
 												</Text>
 											)}
-											{!block.free && extra > 0 && <Text style={styles.moreIndicator}>+{extra}</Text>}
+											{!block.free && extra > 0 && (
+												<Text
+													style={
+														styles.moreIndicator
+													}>
+													+{extra}
+												</Text>
+											)}
 										</Pressable>
 									);
 								})}
@@ -565,14 +1052,14 @@ export default Timetable;
 
 const styles = StyleSheet.create({
 	wrapper: {
-		flex: 1,
+		flex: 1
 	},
 	container: {
-		padding: 10,
+		padding: 10
 	},
 	scrollInner: {
 		paddingBottom: 40,
-		marginBottom: 40,
+		marginBottom: 40
 	},
 	heading: {
 		fontSize: 30,
@@ -580,13 +1067,13 @@ const styles = StyleSheet.create({
 		padding: 20,
 		flex: 1,
 		alignItems: "center",
-		justifyContent: "space-between",
+		justifyContent: "space-between"
 	},
 	semiheading: {
 		fontSize: 20,
 		padding: 10,
 		textAlign: "center",
-		marginBottom: 0,
+		marginBottom: 0
 	},
 	button: {
 		fontSize: 15,
@@ -594,45 +1081,49 @@ const styles = StyleSheet.create({
 		padding: 10,
 		borderRadius: 8,
 		textAlign: "center",
-		marginBottom: 10,
+		marginBottom: 10
 	},
 	error: {
 		color: "#b00020",
 		marginTop: 8,
-		textAlign: "center",
+		textAlign: "center"
 	},
 	mono: {
-		fontFamily: Platform.select({ ios: "Courier", android: "monospace", default: "System" }),
+		fontFamily: Platform.select({
+			ios: "Courier",
+			android: "monospace",
+			default: "System"
+		}),
 		fontSize: 12,
 		lineHeight: 16,
 		color: "#222",
-		paddingHorizontal: 8,
+		paddingHorizontal: 8
 	},
 	headerRow: {
-		marginBottom: 0,
+		marginBottom: 0
 	},
 	actions: {
 		flexDirection: "row",
 		gap: 10,
 		marginBottom: 10,
-		flexWrap: "wrap",
+		flexWrap: "wrap"
 	},
 	actionBtn: {
 		backgroundColor: "#ffcb3dff",
 		paddingHorizontal: 14,
 		paddingVertical: 8,
-		borderRadius: 6,
+		borderRadius: 6
 	},
 	actionBtnPressed: {
-		opacity: 0.65,
+		opacity: 0.65
 	},
 	actionBtnText: {
 		fontWeight: "600",
-		color: "#222",
+		color: "#222"
 	},
 	actionBtnIcon: {
 		fontSize: 18,
-		color: "#222",
+		color: "#222"
 	},
 	block: {
 		borderWidth: 1,
@@ -645,92 +1136,92 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.05,
 		shadowRadius: 4,
 		shadowOffset: { width: 0, height: 2 },
-		elevation: 1,
+		elevation: 1
 	},
 	blockCancelled: {
 		backgroundColor: "#ffe5e5",
 		borderColor: "#ff5a5a",
 		borderWidth: 1,
-		position: "relative",
+		position: "relative"
 	},
 	blockChanged: {
 		backgroundColor: "#e6ffecff",
 		borderColor: "#32cd32",
 		borderWidth: 1,
-		position: "relative",
+		position: "relative"
 	},
 	blockUniform: {
 		height: 60,
-		justifyContent: "space-between",
+		justifyContent: "space-between"
 	},
 	dayBlockUniform: {
-		height: 58.5,
+		height: 58.5
 	},
 	blockMin: {
-		width: 64,
+		width: 64
 	},
 	blockFree: {
 		backgroundColor: "#f6f6f6",
-		borderStyle: "dashed",
+		borderStyle: "dashed"
 	},
 	blockHeaderRow: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
-		marginBottom: 4,
+		marginBottom: 4
 	},
 	blockTitle: {
 		fontSize: 14,
 		fontWeight: "700",
-		marginBottom: 1,
+		marginBottom: 1
 	},
 	moreIndicator: {
 		fontSize: 8,
 		fontWeight: "600",
-		color: "#555",
+		color: "#555"
 	},
 	freeText: {
 		fontStyle: "italic",
-		color: "#666",
+		color: "#666"
 	},
 	lessonLine: {
-		marginBottom: 6,
+		marginBottom: 6
 	},
 	time: {
 		fontWeight: "600",
-		color: "#333",
+		color: "#333"
 	},
 	subject: {
 		fontSize: 11,
 		fontWeight: "700",
-		color: "#111",
+		color: "#111"
 	},
 	subjectOld: {
-		textDecorationLine: "line-through",
+		textDecorationLine: "line-through"
 	},
 	meta: {
 		fontSize: 10,
-		color: "#444",
+		color: "#444"
 	},
 	metaOld: {
-		textDecorationLine: "line-through",
+		textDecorationLine: "line-through"
 	},
 	subjectCancelled: {
 		textDecorationLine: "line-through",
 		color: "#b30000",
-		fontWeight: "700",
+		fontWeight: "700"
 	},
 	metaCancelled: {
 		textDecorationLine: "line-through",
-		color: "#cc0000",
+		color: "#cc0000"
 	},
 	subjectChanged: {
 		fontWeight: "900",
-		color: "#32cd32",
+		color: "#32cd32"
 	},
 	metaChanged: {
 		fontWeight: "900",
-		color: "#32cd32",
+		color: "#32cd32"
 	},
 	cancelledBadge: {
 		position: "absolute",
@@ -743,7 +1234,7 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		fontSize: 8,
 		fontWeight: "700",
-		letterSpacing: 0.5,
+		letterSpacing: 0.5
 	},
 	changeBadge: {
 		position: "absolute",
@@ -756,28 +1247,28 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		fontSize: 8,
 		fontWeight: "700",
-		letterSpacing: 0.5,
+		letterSpacing: 0.5
 	},
 	smallBadge: {
-		fontSize: 10,
+		fontSize: 10
 	},
 	detailBadge: {
 		position: "absolute",
 		top: 4,
 		right: 6,
-		zIndex: 10,
+		zIndex: 10
 	},
 	classText: {
 		fontSize: 10,
 		color: "#222",
-		opacity: 0.75,
+		opacity: 0.75
 	},
 	dateSelector: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 30,
-		marginBottom: 10,
+		marginBottom: 10
 	},
 	dateBtn: {
 		backgroundColor: "#fcba03",
@@ -785,7 +1276,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 		borderRadius: 8,
 		minWidth: 44,
-		alignItems: "center",
+		alignItems: "center"
 	},
 	dateBtnPressed: { opacity: 0.6 },
 	dateBtnText: { fontWeight: "700", fontSize: 16, color: "#222" },
@@ -796,7 +1287,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 10,
 		paddingVertical: 4,
 		borderRadius: 6,
-		backgroundColor: "#ffe18fff",
+		backgroundColor: "#ffe18fff"
 	},
 	inlineSmallBtnPressed: { opacity: 0.6 },
 	inlineSmallBtnText: { fontSize: 12, fontWeight: "600" },
@@ -806,26 +1297,26 @@ const styles = StyleSheet.create({
 	weekView: {
 		flex: 1,
 		flexDirection: "row",
-		gap: 5,
+		gap: 5
 	},
 	dayView: {
 		flex: 1,
 		flexDirection: "row",
 		gap: 5,
 		alignItems: "flex-start",
-		marginBottom: 16,
+		marginBottom: 16
 	},
 	weekIndexCol: {
-		width: 48,
+		width: 48
 	},
 	dayIndexCol: {
-		width: 55,
+		width: 55
 	},
 	indexHeaderText: { textAlign: "center" },
 	indexBlock: {
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 4,
+		gap: 4
 	},
 	indexBlockTitle: { fontSize: 12, fontWeight: "700", color: "#222" },
 	indexBlockTime: {
@@ -833,7 +1324,7 @@ const styles = StyleSheet.create({
 		color: "#444",
 		textAlign: "center",
 		lineHeight: 12,
-		paddingTop: 2,
+		paddingTop: 2
 	},
 	blockPlaceholder: { backgroundColor: "#fafafa", borderStyle: "dotted" },
 	placeholderText: { fontSize: 10, color: "#bbb", textAlign: "center" },
@@ -843,7 +1334,7 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		padding: 10,
 		borderWidth: 1,
-		borderColor: "#eee",
+		borderColor: "#eee"
 	},
 	detailTime: { fontSize: 12, fontWeight: "600", color: "#222" },
 	detailSubject: { fontSize: 14, fontWeight: "700", color: "#111" },
@@ -862,7 +1353,7 @@ const styles = StyleSheet.create({
 		shadowRadius: 4,
 		shadowOffset: { width: 0, height: 2 },
 		zIndex: 20,
-		marginBottom: 5,
+		marginBottom: 5
 	},
 	leftBarGroup: { flexDirection: "row", alignItems: "center", gap: 8 },
 	barBtn: {
@@ -871,7 +1362,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 6,
 		borderRadius: 8,
 		minWidth: 60,
-		alignItems: "center",
+		alignItems: "center"
 	},
 	barBtnPressed: { opacity: 0.65 },
 	barIcon: { fontSize: 20, color: "#222", fontWeight: "600" },
@@ -882,7 +1373,7 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(0,0,0,0.4)",
 		justifyContent: "center",
 		alignItems: "center",
-		padding: 20,
+		padding: 20
 	},
 	modalCard: {
 		backgroundColor: "#fff",
@@ -895,25 +1386,29 @@ const styles = StyleSheet.create({
 		shadowRadius: 10,
 		shadowOffset: { width: 0, height: 4 },
 		elevation: 5,
-		gap: 16,
+		gap: 16
 	},
 	modalTitle: { fontSize: 18, fontWeight: "700", textAlign: "center" },
-	modalActions: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+	modalActions: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		gap: 12
+	},
 	modalBtn: {
 		backgroundColor: "#fcba03",
 		flex: 1,
 		paddingVertical: 10,
 		borderRadius: 8,
-		alignItems: "center",
+		alignItems: "center"
 	},
 	modalBtnSecondary: {
 		backgroundColor: "#eee",
 		flex: 1,
 		paddingVertical: 10,
 		borderRadius: 8,
-		alignItems: "center",
+		alignItems: "center"
 	},
 	modalBtnPressed: { opacity: 0.6 },
 	modalBtnText: { fontWeight: "600", color: "#222" },
-	modalBtnSecondaryText: { fontWeight: "600", color: "#444" },
+	modalBtnSecondaryText: { fontWeight: "600", color: "#444" }
 });
