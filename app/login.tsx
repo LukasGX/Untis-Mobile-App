@@ -1,6 +1,14 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+	KeyboardAvoidingView,
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View
+} from "react-native";
 import { WebUntis } from "webuntis";
 import { loadCredentials, saveCredentials } from "../utils/secureCredentials";
 
@@ -36,9 +44,19 @@ const Login = () => {
 		}
 		setLoading(true);
 		try {
-			const untis = new WebUntis(school.trim(), user.trim(), password, host.trim());
+			const untis = new WebUntis(
+				school.trim(),
+				user.trim(),
+				password,
+				host.trim()
+			);
 			await untis.login();
-			await saveCredentials({ school: school.trim(), user: user.trim(), password, host: host.trim() });
+			await saveCredentials({
+				school: school.trim(),
+				user: user.trim(),
+				password,
+				host: host.trim()
+			});
 			// (Optional) store in a global singleton for reuse by tab screens
 			// You can later move this to secure storage.
 			// Navigate to tabs root
@@ -51,17 +69,51 @@ const Login = () => {
 	};
 
 	return (
-		<KeyboardAvoidingView style={styles.wrapper} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+		<KeyboardAvoidingView
+			style={styles.wrapper}
+			behavior={Platform.OS === "ios" ? "padding" : undefined}>
 			<Text style={styles.heading}>Untis+</Text>
 			<View style={styles.container}>
 				<Text style={styles.sheading}>Login</Text>
-				<TextInput style={styles.input} placeholder="Schulname" value={school} onChangeText={setSchool} autoCapitalize="none" />
-				<TextInput style={styles.input} placeholder="Benutzername" value={user} onChangeText={setUser} autoCapitalize="none" />
-				<TextInput style={styles.input} placeholder="Passwort" value={password} onChangeText={setPassword} secureTextEntry />
-				<TextInput style={styles.input} placeholder="Host" value={host} onChangeText={setHost} autoCapitalize="none" />
+				<TextInput
+					style={styles.input}
+					placeholder="Schulname"
+					value={school}
+					onChangeText={setSchool}
+					autoCapitalize="none"
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Benutzername"
+					value={user}
+					onChangeText={setUser}
+					autoCapitalize="none"
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Passwort"
+					value={password}
+					onChangeText={setPassword}
+					secureTextEntry
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Host"
+					value={host}
+					onChangeText={setHost}
+					autoCapitalize="none"
+				/>
 				{error && <Text style={styles.error}>{error}</Text>}
-				<Pressable style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} onPress={handleLogin} disabled={loading}>
-					<Text style={styles.buttonText}>{loading ? "Einloggen..." : "Login"}</Text>
+				<Pressable
+					style={({ pressed }) => [
+						styles.button,
+						pressed && styles.buttonPressed
+					]}
+					onPress={handleLogin}
+					disabled={loading}>
+					<Text style={styles.buttonText}>
+						{loading ? "Einloggen..." : "Login"}
+					</Text>
 				</Pressable>
 			</View>
 		</KeyboardAvoidingView>
@@ -73,7 +125,7 @@ export default Login;
 const styles = StyleSheet.create({
 	wrapper: {
 		flex: 1,
-		backgroundColor: "#fff",
+		backgroundColor: "#fff"
 	},
 	container: {
 		marginHorizontal: 24,
@@ -85,20 +137,20 @@ const styles = StyleSheet.create({
 		shadowRadius: 8,
 		shadowOffset: { width: 0, height: 2 },
 		elevation: 2,
-		marginTop: 80,
+		marginTop: 80
 	},
 	heading: {
 		fontSize: 30,
 		backgroundColor: "#fcba03",
 		padding: 20,
-		textAlign: "center",
+		textAlign: "center"
 	},
 	sheading: {
 		fontSize: 28,
 		fontWeight: "700",
 		marginBottom: 24,
 		textAlign: "center",
-		color: "#222",
+		color: "#222"
 	},
 	input: {
 		borderWidth: 1,
@@ -107,26 +159,26 @@ const styles = StyleSheet.create({
 		padding: 12,
 		marginBottom: 16,
 		fontSize: 16,
-		backgroundColor: "#fff",
+		backgroundColor: "#fff"
 	},
 	button: {
 		backgroundColor: "#fcba03",
 		paddingVertical: 14,
 		borderRadius: 8,
 		alignItems: "center",
-		marginTop: 8,
+		marginTop: 8
 	},
 	buttonPressed: {
-		opacity: 0.7,
+		opacity: 0.7
 	},
 	buttonText: {
 		fontWeight: "700",
 		fontSize: 16,
-		color: "#222",
+		color: "#222"
 	},
 	error: {
 		color: "#b00020",
 		marginBottom: 8,
-		textAlign: "center",
-	},
+		textAlign: "center"
+	}
 });

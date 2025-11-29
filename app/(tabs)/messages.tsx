@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebUntis } from "webuntis";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
@@ -12,6 +13,7 @@ const Messages = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [inbox, setInbox] = useState<any[] | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
+	const insets = useSafeAreaInsets();
 
 	const formatMessageText = (text: string) => {
 		// Doppelte Spaces → Zeilenumbrüche
@@ -99,83 +101,95 @@ const Messages = () => {
 	return (
 		<View style={sharedStyles.screen}>
 			<Text style={sharedStyles.heading}>Untis+</Text>
-			<View style={sharedStyles.container}>
+			<View style={[sharedStyles.container, { paddingBottom: 120 }]}>
 				<Text style={sharedStyles.semiHeading}>Mitteilungen</Text>
 				{error ? (
 					<Text>{error}</Text>
 				) : loading ? (
 					<Text> Lade Mitteilungen... </Text>
 				) : inbox && inbox.length > 0 ? (
-					<ScrollView>
-						{inbox?.map((msg: any, idx: number) => (
-							<View
-								key={msg.id || idx}
-								style={{
-									marginBottom: 16,
-									padding: 12,
-									backgroundColor: "#f9f9f9",
-									borderRadius: 8
-								}}>
-								<Text
-									style={{
-										fontWeight: "600",
-										fontSize: 16,
-										marginBottom: 4
-									}}>
-									{msg.subject || `Nachricht ${idx + 1}`}
-								</Text>
-								<Text
-									style={{
-										color: "#666",
-										fontSize: 14,
-										marginBottom: 8
-									}}>
-									{msg.sender?.displayName || "Unbekannt"} •{" "}
-									{new Date(
-										msg.sentDateTime
-									).toLocaleDateString("de-DE", {
-										day: "numeric",
-										month: "short",
-										year: "numeric"
-									})}
-								</Text>
-								<View
-									style={{
-										flex: 1,
-										marginBottom: 8
-									}}>
-									{formatMessageText(
-										msg.contentPreview || ""
-									).map((line, i) => (
-										<Text
-											key={i}
-											style={{
-												lineHeight: 20,
-												marginBottom:
-													i <
-													formatMessageText(
-														msg.contentPreview || ""
-													).length -
-														1
-														? 4
-														: 0
-											}}>
-											{line}
-										</Text>
-									))}
-								</View>
-								{msg.hasAttachments && (
-									<Text
+					<ScrollView
+						contentContainerStyle={{
+							paddingBottom: Math.max(24, insets.bottom + 8)
+						}}>
+						{inbox?.map(
+							(msg: any, idx: number) => (
+								console.log(msg),
+								(
+									<View
+										key={msg.id || idx}
 										style={{
-											color: "blue",
-											fontSize: 12,
-											marginTop: 4
+											marginBottom: 16,
+											padding: 12,
+											backgroundColor: "#f9f9f9",
+											borderRadius: 8
 										}}>
-										📎 Anhang
-									</Text>
-								)}
-							</View>
-						))}
+										<Text
+											style={{
+												fontWeight: "600",
+												fontSize: 16,
+												marginBottom: 4
+											}}>
+											{msg.subject ||
+												`Nachricht ${idx + 1}`}
+										</Text>
+										<Text
+											style={{
+												color: "#666",
+												fontSize: 14,
+												marginBottom: 8
+											}}>
+											{msg.sender?.displayName ||
+												"Unbekannt"}{" "}
+											•{" "}
+											{new Date(
+												msg.sentDateTime
+											).toLocaleDateString("de-DE", {
+												day: "numeric",
+												month: "short",
+												year: "numeric"
+											})}
+										</Text>
+										<View
+											style={{
+												flex: 1,
+												marginBottom: 8
+											}}>
+											{formatMessageText(
+												msg.contentPreview || ""
+											).map((line, i) => (
+												<Text
+													key={i}
+													style={{
+														lineHeight: 20,
+														marginBottom:
+															i <
+															formatMessageText(
+																msg.contentPreview ||
+																	""
+															).length -
+																1
+																? 4
+																: 0
+													}}>
+													{line}
+												</Text>
+											))}
+										</View>
+										{msg.hasAttachments && (
+											<Text
+												style={{
+													color: "blue",
+													fontSize: 12,
+													marginTop: 4
+												}}>
+												📎 Anhang
+											</Text>
+										)}
+									</View>
+								)
+							)
+						)}
 					</ScrollView>
 				) : (
 					<Text>Keine Mitteilungen</Text>

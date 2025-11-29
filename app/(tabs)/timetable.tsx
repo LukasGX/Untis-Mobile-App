@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -14,7 +15,8 @@ import { createUntis, realTimetable } from "../../method";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
 
-// Credentials now sourced from secure storage
+const TIMETABLE_STYLE_KEY = "timetableStyle";
+const SPECIAL_PERMISSION_REQUESTED_KEY = "specialPermissionRequested";
 
 // initial date (can default to today or a fixed date)
 const initialDate = new Date();
@@ -34,8 +36,15 @@ const Timetable = () => {
 	const [detailLoading, setDetailLoading] = useState(false);
 	const [detailError, setDetailError] = useState<string | null>(null);
 
+	const [timetableStyle, setTimetableStyle] = useState<
+		"style1" | "style2" | "style3"
+	>("style1");
+	const [specialPermissionRequested, setSpecialPermissionRequested] =
+		useState<boolean>(false);
+
 	const fetchData = useCallback(
 		async (dateOverride?: Date) => {
+			let isMounted = true;
 			setLoading(true);
 			setError(null);
 			try {
@@ -72,6 +81,25 @@ const Timetable = () => {
 					results.forEach((r) => (map[r.iso] = r.data));
 					setTimetableWeek(map);
 					setTimetable(null);
+				}
+
+				// Load saved Settings
+				const savedStyle = await SecureStore.getItemAsync(
+					TIMETABLE_STYLE_KEY
+				);
+				if (
+					savedStyle === "style1" ||
+					savedStyle === "style2" ||
+					savedStyle === "style3"
+				) {
+					if (isMounted) setTimetableStyle(savedStyle);
+				}
+
+				const requested = await SecureStore.getItemAsync(
+					SPECIAL_PERMISSION_REQUESTED_KEY
+				);
+				if (requested === "true") {
+					if (isMounted) setSpecialPermissionRequested(true);
 				}
 			} catch (e: any) {
 				setError(e?.message || "Failed to load timetable");
@@ -685,7 +713,20 @@ const Timetable = () => {
 												!block.free &&
 												styles.blockPressed,
 											cancelled && styles.blockCancelled,
-											someChange && styles.blockChanged
+											someChange && styles.blockChanged,
+											timetableStyle === "style2" &&
+												!cancelled &&
+												!someChange &&
+												!block.free && {
+													borderColor: "#002fffff"
+												},
+											timetableStyle === "style3" &&
+												!cancelled &&
+												!someChange &&
+												!block.free && {
+													borderColor: "#002fffff",
+													backgroundColor: "#aabaffff"
+												}
 										]}
 										disabled={block.free || !entries.length}
 										onPress={() =>
