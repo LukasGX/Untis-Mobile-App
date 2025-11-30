@@ -13,7 +13,10 @@ import {
 } from "react-native";
 import { createUntis, realTimetable } from "../../method";
 import { sharedStyles } from "../../styles/shared";
-import { loadCredentials } from "../../utils/secureCredentials";
+import {
+	getStoredColors,
+	loadCredentials
+} from "../../utils/secureCredentials";
 
 const TIMETABLE_STYLE_KEY = "timetableStyle";
 const SPECIAL_PERMISSION_REQUESTED_KEY = "specialPermissionRequested";
@@ -24,6 +27,11 @@ const initialDate = new Date();
 const Timetable = () => {
 	const [timetable, setTimetable] = useState<any | null>(null);
 	const [timetableWeek, setTimetableWeek] = useState<Record<
+		string,
+		any
+	> | null>(null);
+	// parallel storage for week data with full subject names
+	const [timetableWeekLong, setTimetableWeekLong] = useState<Record<
 		string,
 		any
 	> | null>(null);
@@ -42,6 +50,11 @@ const Timetable = () => {
 	const [specialPermissionRequested, setSpecialPermissionRequested] =
 		useState<boolean>(false);
 
+	// colors read from secure storage (falls back to defaults via helper)
+	const [colors, setColors] = useState<Record<string, string>>(
+		getStoredColors(null)
+	);
+
 	const fetchData = useCallback(
 		async (dateOverride?: Date) => {
 			let isMounted = true;
@@ -49,6 +62,9 @@ const Timetable = () => {
 			setError(null);
 			try {
 				const stored = await loadCredentials();
+				// always update colors (will use defaults if stored is null)
+				const storedColors = getStoredColors(stored);
+				if (isMounted) setColors(storedColors);
 				if (!stored) {
 					setError("Nicht eingeloggt");
 					setTimetable(null);
@@ -69,17 +85,28 @@ const Timetable = () => {
 					setTimetableWeek(null);
 				} else {
 					const weekDays = getWeekDays(dateToUse);
+					// fetch week short and long subject versions in parallel per day
 					const results = await Promise.all(
 						weekDays.map(async (d) => {
+							const [shortData, longData] = await Promise.all([
+								realTimetable(untis, d, true),
+								realTimetable(untis, d, false)
+							]);
 							return {
 								iso: isoKey(d),
-								data: await realTimetable(untis, d, true)
+								short: shortData,
+								long: longData
 							};
 						})
 					);
-					const map: Record<string, any> = {};
-					results.forEach((r) => (map[r.iso] = r.data));
-					setTimetableWeek(map);
+					const mapShort: Record<string, any> = {};
+					const mapLong: Record<string, any> = {};
+					results.forEach((r) => {
+						mapShort[r.iso] = r.short;
+						mapLong[r.iso] = r.long;
+					});
+					setTimetableWeek(mapShort);
+					setTimetableWeekLong(mapLong);
 					setTimetable(null);
 				}
 
@@ -121,8 +148,9 @@ const Timetable = () => {
 		return `${s.slice(0, 2)}:${s.slice(2)}`;
 	};
 
-	// Helpers to build block arrays
-	const buildBlocks = (dayData: any) => {
+	// Helpers to build block arrays. Accept optional `longDayData` to attach
+	// full subject names as `lognSubject` on each block when available.
+	const buildBlocks = (dayData: any, longDayData?: any) => {
 		if (!dayData) return [] as any[];
 		const blockOrder = (id: string) => {
 			if (id === "M") return 6.5;
@@ -132,6 +160,8 @@ const Timetable = () => {
 		const entries = Object.entries(dayData).filter(([k]) => k !== "date");
 		entries.sort((a, b) => blockOrder(a[0]) - blockOrder(b[0]));
 		return entries.map(([id, value]) => {
+			// try to locate corresponding long-name entry for this id
+			const longValue = longDayData ? longDayData[id] : undefined;
 			if (Array.isArray(value)) {
 				return {
 					id,
@@ -150,7 +180,20 @@ const Timetable = () => {
 						roomOld: (v.lesson?.roomOld || []).join(", ") || "",
 						subjectOld:
 							(v.lesson?.subjectOld || []).join(", ") || ""
-					}))
+					})),
+					// attach long subject for this block (use first entry of longValue if present)
+					lognSubject:
+						Array.isArray(longValue) &&
+						longValue[0] &&
+						longValue[0].lesson
+							? (longValue[0].lesson.subject || []).join(", ")
+							: (Array.isArray(value) &&
+									value[0] &&
+									value[0].lesson &&
+									(value[0].lesson.subject || []).join(
+										", "
+									)) ||
+							  ""
 				};
 			}
 			return {
@@ -158,7 +201,13 @@ const Timetable = () => {
 				free: value && (value as any).lesson === null,
 				start: (value as any)?.startTime,
 				end: (value as any)?.endTime,
-				code: ""
+				code: "",
+				lognSubject:
+					Array.isArray(longValue) &&
+					longValue[0] &&
+					longValue[0].lesson
+						? (longValue[0].lesson.subject || []).join(", ")
+						: ""
 			};
 		});
 	};
@@ -220,7 +269,11 @@ const Timetable = () => {
 		};
 		const perDay = weekDays.map((d) => {
 			const iso = isoKey(d);
-			const blocks = buildBlocks(timetableWeek[iso]);
+			// pass long-day data to buildBlocks so it can attach `lognSubject`
+			const blocks = buildBlocks(
+				timetableWeek[iso],
+				(timetableWeekLong && timetableWeekLong[iso]) || undefined
+			);
 			return { iso, date: d, blocks };
 		});
 		const idSet = new Set<string>();
@@ -250,7 +303,7 @@ const Timetable = () => {
 			return { id, timeRange };
 		});
 		return { perDay, indexData };
-	}, [viewMode, timetableWeek, weekDays]);
+	}, [viewMode, timetableWeek, timetableWeekLong, weekDays]);
 	const formatWeekHeader = (days: Date[]) => {
 		if (!days.length) return "";
 		const first = days[0];
@@ -718,14 +771,23 @@ const Timetable = () => {
 												!cancelled &&
 												!someChange &&
 												!block.free && {
-													borderColor: "#002fffff"
+													borderColor:
+														colors[
+															`${first.subject}-border`
+														] || "#ff00e1"
 												},
 											timetableStyle === "style3" &&
 												!cancelled &&
 												!someChange &&
 												!block.free && {
-													borderColor: "#002fffff",
-													backgroundColor: "#aabaffff"
+													borderColor:
+														colors[
+															`${first.subject}_bd`
+														] || "#ff00e1",
+													backgroundColor:
+														colors[
+															`${first.subject}_bg`
+														] || "#ff00e1"
 												}
 										]}
 										disabled={block.free || !entries.length}
@@ -971,7 +1033,33 @@ const Timetable = () => {
 													cancelled &&
 														styles.blockCancelled,
 													someChange &&
-														styles.blockChanged
+														styles.blockChanged,
+													// apply color variants like in day view
+													timetableStyle ===
+														"style2" &&
+														!cancelled &&
+														!someChange &&
+														!block.free && {
+															borderColor:
+																colors[
+																	`${block.lognSubject}-border`
+																] || "#002fffff"
+														},
+													timetableStyle ===
+														"style3" &&
+														!cancelled &&
+														!someChange &&
+														!block.free && {
+															borderColor:
+																colors[
+																	`${block.lognSubject}_bd`
+																] ||
+																"#002fffff",
+															backgroundColor:
+																colors[
+																	`${block.lognSubject}_bg`
+																] || "#aabaffff"
+														}
 												];
 											}}
 											disabled={
