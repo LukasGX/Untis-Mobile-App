@@ -11,18 +11,26 @@ import {
 import { WebUntis } from "webuntis";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
+import { supabase } from "../../utils/supabase";
 
 const TIMETABLE_STYLE_KEY = "timetableStyle";
 const SPECIAL_PERMISSION_REQUESTED_KEY = "specialPermissionRequested";
+const SPECIAL_PERMISSION_REQUEST_PENDING_KEY =
+	"specialPermissionRequestPending";
 
 const Settings = () => {
 	const [school, setSchool] = useState<string | null>(null);
 	const [username, setUserName] = useState<string | null>(null);
+	const [name, setName] = useState<string | null>(null);
+	const [type, setType] = useState<string | null>(null);
+	const [id, setID] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [timetableStyle, setTimetableStyle] = useState<
 		"style1" | "style2" | "style3"
 	>("style1");
 	const [specialPermissionRequested, setSpecialPermissionRequested] =
+		useState<boolean>(false);
+	const [hasSpecialPermission, setHasSpecialPermission] =
 		useState<boolean>(false);
 
 	// Lade Einstellungen beim Start
@@ -46,6 +54,20 @@ const Settings = () => {
 				if (isMounted) {
 					setSchool(untis.school);
 					setUserName(untis.username);
+					setID(untis.id);
+					const students = await untis.getStudents();
+					const teachers = await untis.getTeachers();
+					const person =
+						students.find((s) => s.id.toString() === untis.id) ||
+						teachers.find((t) => t.id.toString() === untis.id);
+					if (person) {
+						setName(person.name);
+						setType(
+							students.find((s) => s.id.toString() === untis.id)
+								? "Schüler"
+								: "Lehrer"
+						);
+					}
 				}
 
 				// Load saved Settings
@@ -84,14 +106,58 @@ const Settings = () => {
 
 	const requestSpecialPermissions = async () => {
 		Alert.alert(
-			"Spezialberechtigungen anfragen",
-			"Deine Anfrage zu Spezialberechtigungen wurde gesendet.",
-			[{ text: "OK" }]
+			"Anfrage für spezielle Berechtigungen",
+			"Wenn du die Anfrage absendest, werden folgende Daten an den Untis+ Entwickler gesendet:\n\n- Deine Schule\n- Dein Benutzername\n- Dein echter Name\n- Deine Rolle (Schüler oder Lehrer)\n\nDiese Daten werden ausschließlich dazu verwendet, um deine Anfrage zu bearbeiten. Es werden keine weiteren Daten gesammelt oder gespeichert.\n\nMöchtest du die Anfrage absenden?",
+			[
+				{
+					text: "Nein",
+					onPress: () => donotSendData(),
+					style: "cancel"
+				},
+				{ text: "Ja", onPress: () => doSendData() }
+			]
 		);
+	};
+
+	const doSendData = async () => {
 		setSpecialPermissionRequested(true);
 		await SecureStore.setItemAsync(
 			SPECIAL_PERMISSION_REQUESTED_KEY,
 			"true"
+		);
+
+		await SecureStore.setItemAsync(
+			SPECIAL_PERMISSION_REQUEST_PENDING_KEY,
+			"true"
+		);
+
+		const { data, error } = await supabase.from("requests").insert([
+			{
+				school: school,
+				username: username,
+				name: name,
+				type: type,
+				status: "pending"
+			}
+		]);
+
+		console.log(data, error);
+
+		Alert.alert(
+			"Anfrage gesendet",
+			"Die Anfrage für spezielle Berechtigungen wurde gesendet und wird überprüft."
+		);
+	};
+	const donotSendData = async () => {
+		setSpecialPermissionRequested(false);
+		await SecureStore.setItemAsync(
+			SPECIAL_PERMISSION_REQUESTED_KEY,
+			"false"
+		);
+
+		Alert.alert(
+			"Anfrage abgebrochen",
+			"Die Anfrage für spezielle Berechtigungen wurde abgebrochen."
 		);
 	};
 
@@ -279,7 +345,7 @@ const stylesDesign1 = StyleSheet.create({
 const stylesDesign2 = StyleSheet.create({
 	block: {
 		borderWidth: 1,
-		borderColor: "#002fffff", // ! color of subject
+		borderColor: "#334EFF", // ! color of subject
 		borderRadius: 8,
 		padding: 10,
 		marginBottom: 5,
@@ -310,11 +376,11 @@ const stylesDesign2 = StyleSheet.create({
 const stylesDesign3 = StyleSheet.create({
 	block: {
 		borderWidth: 1,
-		borderColor: "#002fffff", // ! color of subject
+		borderColor: "#334EFF", // ! color of subject
 		borderRadius: 8,
 		padding: 10,
 		marginBottom: 5,
-		backgroundColor: "#aabaffff", // ! lighter color of subject
+		backgroundColor: "#93a2ffff", // ! lighter color of subject
 		shadowColor: "#000",
 		shadowOpacity: 0.05,
 		shadowRadius: 4,

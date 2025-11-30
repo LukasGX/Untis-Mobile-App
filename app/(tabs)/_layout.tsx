@@ -1,9 +1,30 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React from "react";
+import * as SecureStore from "expo-secure-store";
+import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
 const TabsLayout = () => {
+	const [hasSpecialPermission, setHasSpecialPermission] =
+		useState<boolean>(false);
+
+	useEffect(() => {
+		let isMounted = true;
+		(async () => {
+			try {
+				const permission = await SecureStore.getItemAsync(
+					"specialPermissionOwning"
+				);
+				if (isMounted) {
+					setHasSpecialPermission(permission === "true");
+				}
+			} catch {}
+		})();
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
 	return (
 		<Tabs
 			screenOptions={{
@@ -85,6 +106,23 @@ const TabsLayout = () => {
 					)
 				}}
 			/>
+
+			{hasSpecialPermission && (
+				<Tabs.Screen
+					name="special"
+					options={{
+						title: "Spezial",
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								style={styles.icon}
+								name={focused ? "star" : "star-outline"}
+								size={size}
+								color={color}
+							/>
+						)
+					}}
+				/>
+			)}
 		</Tabs>
 	);
 };
