@@ -115,6 +115,10 @@ const Login = () => {
 						{loading ? "Einloggen..." : "Login"}
 					</Text>
 				</Pressable>
+
+				<Text style={styles.tip}>
+					Die Anmeldedaten werden auf diesem Gerät gespeichert.
+				</Text>
 			</View>
 		</KeyboardAvoidingView>
 	);
@@ -179,6 +183,12 @@ const styles = StyleSheet.create({
 	error: {
 		color: "#b00020",
 		marginBottom: 8,
+		textAlign: "center"
+	},
+	tip: {
+		marginTop: 16,
+		fontSize: 12,
+		color: "#555",
 		textAlign: "center"
 	}
 });

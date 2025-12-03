@@ -153,8 +153,7 @@ const Index = () => {
 						Willkommen, {username ?? "Loading..."}!
 					</Text>
 				)}
-
-				<View style={styles.weatherCard}>
+				<View style={styles.card}>
 					<Text style={{ fontSize: 24, fontWeight: "bold" }}>
 						{weather?.current.temperature_2m}°C{" "}
 						{getWeatherIcon(weather?.current.weather_code)}
@@ -176,7 +175,7 @@ const Index = () => {
 export default Index;
 
 const styles = StyleSheet.create({
-	weatherCard: {
+	card: {
 		backgroundColor: "#ffffffff",
 		padding: 16,
 		borderRadius: 8,

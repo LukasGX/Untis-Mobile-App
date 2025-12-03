@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
 	Alert,
 	Pressable,
+	ScrollView,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -161,15 +162,40 @@ const Settings = () => {
 		);
 	};
 
+	const gradeManagementHandler = () => {
+		Alert.alert(
+			"Notenverwaltung",
+			"Die Noten werden von Untis+ auf diesem Gerät gespeichert und niemals weitergegeben.\n\nBist du dir sicher, dass du die Notenverwaltung nutzen möchtest?",
+			[
+				{
+					text: "Nein",
+					onPress: () => doNotOpenGradeManagement(),
+					style: "cancel"
+				},
+				{ text: "Ja", onPress: () => openGradeManagement() }
+			]
+		);
+	};
+
+	const openGradeManagement = async () => {
+		await SecureStore.setItemAsync("usingGradeManagement", "true");
+	};
+
+	const doNotOpenGradeManagement = async () => {
+		await SecureStore.setItemAsync("usingGradeManagement", "false");
+		Alert.alert(
+			"Notenverwaltung abgelehnt",
+			"Du hast die Nutzung der Notenverwaltung abgelehnt."
+		);
+	};
+
 	return (
 		<View style={sharedStyles.screen}>
 			<Text style={sharedStyles.heading}>Untis+</Text>
-			<View style={sharedStyles.container}>
+			<ScrollView style={sharedStyles.container}>
 				<Text style={sharedStyles.semiHeading}>Einstellungen</Text>
 
-				<Text style={{ marginTop: 20, fontWeight: "bold" }}>
-					Aussehen des Stundenplans
-				</Text>
+				<Text style={styles.heading}>Aussehen des Stundenplans</Text>
 				<TouchableOpacity
 					style={[
 						styles.option,
@@ -263,31 +289,30 @@ const Settings = () => {
 					</View>
 				</Pressable>
 
-				<View style={{ marginTop: 30 }}>
+				<Text style={styles.heading}>Aktionen</Text>
+
+				<View style={{ marginTop: 10 }}>
 					<TouchableOpacity
 						style={[
 							sharedStyles.button,
-							specialPermissionRequested && styles.disabledButton
+							specialPermissionRequested && styles.disintegrate
 						]}
 						onPress={requestSpecialPermissions}
 						disabled={specialPermissionRequested}>
-						<Text
-							style={
-								specialPermissionRequested
-									? { color: "#000000" }
-									: undefined
-							}>
-							{specialPermissionRequested
-								? "Warten auf Bearbeitung der Anfrage..."
-								: "Spezialberechtigungen anfragen"}
-						</Text>
+						<Text>Spezialberechtigungen anfragen</Text>
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						style={[sharedStyles.button]}
+						onPress={gradeManagementHandler}>
+						<Text>Notenverwaltung</Text>
 					</TouchableOpacity>
 				</View>
 
 				{error && (
 					<Text style={{ color: "red", marginTop: 20 }}>{error}</Text>
 				)}
-			</View>
+			</ScrollView>
 		</View>
 	);
 };
@@ -308,6 +333,18 @@ const styles = StyleSheet.create({
 	},
 	disabledButton: {
 		backgroundColor: "#dbdbdbff"
+	},
+	disintegrate: {
+		display: "none"
+	},
+	lastButton: {
+		marginBottom: 30
+	},
+	heading: {
+		marginTop: 5,
+		fontWeight: "bold",
+		fontSize: 20,
+		textAlign: "center"
 	}
 });
 
