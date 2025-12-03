@@ -51,25 +51,11 @@ const TabsLayout = () => {
 			<Tabs.Screen
 				name="timetable"
 				options={{
-					title: "Mein Stundenplan",
+					title: "Stundenplan",
 					tabBarIcon: ({ color, size, focused }) => (
 						<Ionicons
 							style={styles.icon}
 							name={focused ? "calendar" : "calendar-outline"}
-							size={size}
-							color={color}
-						/>
-					)
-				}}
-			/>
-			<Tabs.Screen
-				name="other_timetable"
-				options={{
-					title: "Andere Stundenpläne",
-					tabBarIcon: ({ color, size, focused }) => (
-						<Ionicons
-							style={styles.icon}
-							name={focused ? "people" : "people-outline"}
 							size={size}
 							color={color}
 						/>

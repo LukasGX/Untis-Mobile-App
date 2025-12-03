@@ -10,7 +10,7 @@ import {
 	TouchableOpacity,
 	View
 } from "react-native";
-import { createUntis } from "../../method";
+import { createUntis, realTimetable } from "../../method";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
 
@@ -29,7 +29,15 @@ const Special = () => {
 	const [rawDataType, setRawDataType] = useState<string | null>(null);
 	const [rawDataNote, setRawDataNote] = useState<string>("");
 	const [showChoiceModal, setShowChoiceModal] = useState(false);
+	const [showChoiceNetworkModal, setShowChoiceNetworkModal] = useState(false);
 	const [selectedType, setSelectedType] = useState<string | null>(null);
+
+	const [showNetworkModal, setShowNetworkModal] = useState(false);
+	const [networkLoading, setNetworkLoading] = useState(false);
+	const [networkError, setNetworkError] = useState<string | null>(null);
+	const [networkData, setNetworkData] = useState<any | null>(null);
+	const [networkType, setNetworkType] = useState<string | null>(null);
+	const [networkNote, setNetworkNote] = useState<string>("");
 
 	useEffect(() => {
 		let isMounted = true;
@@ -129,6 +137,27 @@ const Special = () => {
 		}
 	};
 
+	const handleNetwork = async (type: string) => {
+		setShowChoiceNetworkModal(false);
+		setShowNetworkModal(true);
+		setNetworkLoading(false);
+		setNetworkError(null);
+
+		switch (type) {
+			case "timetable":
+				setNetworkType("Stundenplan");
+				setNetworkNote("");
+				const data = await realTimetable(
+					untis,
+					new Date(),
+					false,
+					true
+				);
+				setNetworkData(data);
+				break;
+		}
+	};
+
 	return (
 		<View style={sharedStyles.screen}>
 			<Modal
@@ -178,9 +207,12 @@ const Special = () => {
 								{rawError}
 							</Text>
 						)}
-						{!rawLoading && !rawError && rawData && (
+						{!rawLoading && !rawError && rawData != undefined && (
 							<ScrollView
-								style={{ maxHeight: 420, marginVertical: 8 }}
+								style={{
+									maxHeight: 420,
+									marginVertical: 8
+								}}
 								contentContainerStyle={{ padding: 8 }}>
 								<Text
 									style={{
@@ -195,6 +227,7 @@ const Special = () => {
 								</Text>
 							</ScrollView>
 						)}
+
 						<View
 							style={{
 								flexDirection: "row",
@@ -222,6 +255,181 @@ const Special = () => {
 					</View>
 				</View>
 			</Modal>
+
+			<Modal
+				visible={showNetworkModal}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setShowNetworkModal(false)}>
+				<View
+					style={{
+						flex: 1,
+						backgroundColor: "rgba(0,0,0,0.4)",
+						justifyContent: "center",
+						alignItems: "center",
+						padding: 20
+					}}>
+					<View
+						style={{
+							backgroundColor: "#fff",
+							borderRadius: 12,
+							padding: 16,
+							width: "100%",
+							maxWidth: 720
+						}}>
+						<Text
+							style={{
+								fontSize: 18,
+								fontWeight: "700",
+								textAlign: "center",
+								marginBottom: 4
+							}}>
+							Netzwerk - {networkType}
+						</Text>
+						<Text
+							style={{
+								fontSize: 12,
+								fontWeight: "300",
+								textAlign: "center"
+							}}>
+							{networkNote}
+						</Text>
+						{networkLoading && (
+							<ActivityIndicator style={{ marginVertical: 12 }} />
+						)}
+						{networkError && !rawLoading && (
+							<Text
+								style={{ color: "#b00020", marginVertical: 8 }}>
+								{networkError}
+							</Text>
+						)}
+						{!networkLoading &&
+							!networkError &&
+							networkData != undefined && (
+								<ScrollView
+									style={{
+										maxHeight: 420,
+										marginVertical: 8
+									}}
+									contentContainerStyle={{ padding: 8 }}>
+									{networkData.map(
+										(element: any, index: number) => (
+											<View key={index}>
+												{element.hideFromNetwork ==
+												true ? null : (
+													<View
+														key={index}
+														style={{
+															marginBottom: 16
+														}}>
+														<Text
+															style={{
+																fontFamily:
+																	Platform.select(
+																		{
+																			ios: "Courier",
+																			android:
+																				"monospace",
+																			default:
+																				"System"
+																		}
+																	),
+																fontSize: 12,
+																fontWeight:
+																	"bold"
+															}}>
+															Request:
+														</Text>
+														<Text
+															style={{
+																fontFamily:
+																	Platform.select(
+																		{
+																			ios: "Courier",
+																			android:
+																				"monospace",
+																			default:
+																				"System"
+																		}
+																	),
+																fontSize: 12
+															}}>
+															{element.request}
+														</Text>
+														<Text
+															style={{
+																fontFamily:
+																	Platform.select(
+																		{
+																			ios: "Courier",
+																			android:
+																				"monospace",
+																			default:
+																				"System"
+																		}
+																	),
+																fontSize: 12,
+																fontWeight:
+																	"bold",
+																marginTop: 8
+															}}>
+															Response:
+														</Text>
+														<Text
+															style={{
+																fontFamily:
+																	Platform.select(
+																		{
+																			ios: "Courier",
+																			android:
+																				"monospace",
+																			default:
+																				"System"
+																		}
+																	),
+																fontSize: 12
+															}}>
+															{JSON.stringify(
+																element.response,
+																null,
+																2
+															)}
+														</Text>
+													</View>
+												)}
+											</View>
+										)
+									)}
+								</ScrollView>
+							)}
+
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "space-between",
+								gap: 12
+							}}>
+							<Pressable
+								style={({ pressed }) => [
+									{
+										backgroundColor: "#fcba03",
+										flex: 1,
+										paddingVertical: 10,
+										borderRadius: 8,
+										alignItems: "center",
+										marginTop: 8
+									},
+									pressed && { opacity: 0.7 }
+								]}
+								onPress={() => setShowNetworkModal(false)}>
+								<Text style={{ fontWeight: "600" }}>
+									Schließen
+								</Text>
+							</Pressable>
+						</View>
+					</View>
+				</View>
+			</Modal>
 			<Text style={sharedStyles.heading}>Untis+</Text>
 			<View style={sharedStyles.container}>
 				<Text style={sharedStyles.semiHeading}>Spezialfunktionen</Text>
@@ -232,18 +440,26 @@ const Special = () => {
 					<Text>Rohdatenansicht</Text>
 				</TouchableOpacity>
 
+				<TouchableOpacity
+					style={[sharedStyles.button]}
+					onPress={() => setShowChoiceNetworkModal(true)}>
+					<Text>Netzwerk</Text>
+				</TouchableOpacity>
+
 				<Modal
 					visible={showChoiceModal}
 					transparent
 					animationType="fade"
 					onRequestClose={() => setShowChoiceModal(false)}>
-					<View
+					<ScrollView
 						style={{
 							flex: 1,
 							backgroundColor: "rgba(0,0,0,0.4)",
-							justifyContent: "center",
-							alignItems: "center",
 							padding: 20
+						}}
+						contentContainerStyle={{
+							justifyContent: "center",
+							alignItems: "center"
 						}}>
 						<View
 							style={{
@@ -441,7 +657,79 @@ const Special = () => {
 								</Pressable>
 							</View>
 						</View>
-					</View>
+					</ScrollView>
+				</Modal>
+
+				<Modal
+					visible={showChoiceNetworkModal}
+					transparent
+					animationType="fade"
+					onRequestClose={() => setShowChoiceNetworkModal(false)}>
+					<ScrollView
+						style={{
+							flex: 1,
+							backgroundColor: "rgba(0,0,0,0.4)",
+							padding: 20
+						}}
+						contentContainerStyle={{
+							justifyContent: "center",
+							alignItems: "center"
+						}}>
+						<View
+							style={{
+								backgroundColor: "#fff",
+								borderRadius: 12,
+								padding: 16,
+								width: "100%",
+								maxWidth: 420
+							}}>
+							<Text
+								style={{
+									fontSize: 18,
+									fontWeight: "700",
+									textAlign: "center",
+									marginBottom: 12
+								}}>
+								Rohdatenansicht wählen
+							</Text>
+							<View style={{ gap: 8 }}>
+								<Pressable
+									style={({ pressed }) => [
+										{
+											backgroundColor: "#e6f0ff",
+											paddingVertical: 12,
+											borderRadius: 8,
+											alignItems: "center"
+										},
+										pressed && { opacity: 0.7 }
+									]}
+									onPress={() => handleNetwork("timetable")}>
+									<Text style={{ fontWeight: "600" }}>
+										Stundenplan
+									</Text>
+								</Pressable>
+
+								<Pressable
+									style={({ pressed }) => [
+										{
+											backgroundColor: "#fcba03",
+											paddingVertical: 10,
+											borderRadius: 8,
+											alignItems: "center",
+											marginTop: 8
+										},
+										pressed && { opacity: 0.7 }
+									]}
+									onPress={() =>
+										setShowChoiceNetworkModal(false)
+									}>
+									<Text style={{ fontWeight: "600" }}>
+										Abbrechen
+									</Text>
+								</Pressable>
+							</View>
+						</View>
+					</ScrollView>
 				</Modal>
 			</View>
 		</View>
