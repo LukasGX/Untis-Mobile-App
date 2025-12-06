@@ -164,28 +164,32 @@ const Settings = () => {
 
 	const gradeManagementHandler = () => {
 		Alert.alert(
-			"Notenverwaltung",
-			"Die Noten werden von Untis+ auf diesem Gerät gespeichert und niemals weitergegeben.\n\nBist du dir sicher, dass du die Notenverwaltung nutzen möchtest?",
+			"Notenverwaltung verwalten",
+			"Die Noten werden von Untis+ auf diesem Gerät gespeichert und niemals weitergegeben.\n\nMöchtest du die Notenverwaltung aktivieren?",
 			[
 				{
-					text: "Nein",
+					text: "Deaktivieren",
 					onPress: () => doNotOpenGradeManagement(),
 					style: "cancel"
 				},
-				{ text: "Ja", onPress: () => openGradeManagement() }
+				{ text: "Aktivieren", onPress: () => openGradeManagement() }
 			]
 		);
 	};
 
 	const openGradeManagement = async () => {
 		await SecureStore.setItemAsync("usingGradeManagement", "true");
+		Alert.alert(
+			"Notenverwaltung aktiviert",
+			"Du hast die Notenverwaltung aktiviert.\n\nDu kannst sie jederzeit wieder deaktivieren."
+		);
 	};
 
 	const doNotOpenGradeManagement = async () => {
 		await SecureStore.setItemAsync("usingGradeManagement", "false");
 		Alert.alert(
-			"Notenverwaltung abgelehnt",
-			"Du hast die Nutzung der Notenverwaltung abgelehnt."
+			"Notenverwaltung deaktiviert",
+			"Du hast die Notenverwaltung deaktiviert."
 		);
 	};
 

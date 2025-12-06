@@ -93,22 +93,39 @@ const TabsLayout = () => {
 				}}
 			/>
 
-			{hasSpecialPermission && (
-				<Tabs.Screen
-					name="special"
-					options={{
-						title: "Spezial",
-						tabBarIcon: ({ color, size, focused }) => (
-							<Ionicons
-								style={styles.icon}
-								name={focused ? "star" : "star-outline"}
-								size={size}
-								color={color}
-							/>
-						)
-					}}
-				/>
-			)}
+			<Tabs.Screen
+				name="special"
+				options={{
+					title: "Spezial",
+					href: hasSpecialPermission ? "/(tabs)/special" : null,
+					tabBarIcon: ({ color, size, focused }) => (
+						<Ionicons
+							style={styles.icon}
+							name={focused ? "star" : "star-outline"}
+							size={size}
+							color={color}
+						/>
+					)
+				}}
+			/>
+
+			<Tabs.Screen
+				name="gradeManagement"
+				options={{
+					title: "Notenverwaltung",
+					href: hasSpecialPermission
+						? "/(tabs)/gradeManagement"
+						: null,
+					tabBarIcon: ({ color, size, focused }) => (
+						<Ionicons
+							style={styles.icon}
+							name={focused ? "star" : "star-outline"}
+							size={size}
+							color={color}
+						/>
+					)
+				}}
+			/>
 		</Tabs>
 	);
 };
