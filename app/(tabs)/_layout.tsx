@@ -94,14 +94,16 @@ const TabsLayout = () => {
 			/>
 
 			<Tabs.Screen
-				name="special"
+				name="gradeManagement"
 				options={{
-					title: "Spezial",
-					href: hasSpecialPermission ? "/(tabs)/special" : null,
+					title: "Notenverwaltung",
+					href: hasSpecialPermission
+						? "/(tabs)/gradeManagement"
+						: null,
 					tabBarIcon: ({ color, size, focused }) => (
 						<Ionicons
 							style={styles.icon}
-							name={focused ? "star" : "star-outline"}
+							name={focused ? "clipboard" : "clipboard-outline"}
 							size={size}
 							color={color}
 						/>
@@ -110,12 +112,10 @@ const TabsLayout = () => {
 			/>
 
 			<Tabs.Screen
-				name="gradeManagement"
+				name="special"
 				options={{
-					title: "Notenverwaltung",
-					href: hasSpecialPermission
-						? "/(tabs)/gradeManagement"
-						: null,
+					title: "Spezial",
+					href: hasSpecialPermission ? "/(tabs)/special" : null,
 					tabBarIcon: ({ color, size, focused }) => (
 						<Ionicons
 							style={styles.icon}

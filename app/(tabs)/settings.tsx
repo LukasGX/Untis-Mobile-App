@@ -142,8 +142,6 @@ const Settings = () => {
 			}
 		]);
 
-		console.log(data, error);
-
 		Alert.alert(
 			"Anfrage gesendet",
 			"Die Anfrage für spezielle Berechtigungen wurde gesendet und wird überprüft."

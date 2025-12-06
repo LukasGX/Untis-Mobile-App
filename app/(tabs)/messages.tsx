@@ -112,84 +112,75 @@ const Messages = () => {
 						contentContainerStyle={{
 							paddingBottom: Math.max(24, insets.bottom + 8)
 						}}>
-						{inbox?.map(
-							(msg: any, idx: number) => (
-								console.log(msg),
-								(
-									<View
-										key={msg.id || idx}
+						{inbox?.map((msg: any, idx: number) => (
+							<View
+								key={msg.id || idx}
+								style={{
+									marginBottom: 16,
+									padding: 12,
+									backgroundColor: "#f9f9f9",
+									borderRadius: 8
+								}}>
+								<Text
+									style={{
+										fontWeight: "600",
+										fontSize: 16,
+										marginBottom: 4
+									}}>
+									{msg.subject || `Nachricht ${idx + 1}`}
+								</Text>
+								<Text
+									style={{
+										color: "#666",
+										fontSize: 14,
+										marginBottom: 8
+									}}>
+									{msg.sender?.displayName || "Unbekannt"} •{" "}
+									{new Date(
+										msg.sentDateTime
+									).toLocaleDateString("de-DE", {
+										day: "numeric",
+										month: "short",
+										year: "numeric"
+									})}
+								</Text>
+								<View
+									style={{
+										flex: 1,
+										marginBottom: 8
+									}}>
+									{formatMessageText(
+										msg.contentPreview || ""
+									).map((line, i) => (
+										<Text
+											key={i}
+											style={{
+												lineHeight: 20,
+												marginBottom:
+													i <
+													formatMessageText(
+														msg.contentPreview || ""
+													).length -
+														1
+														? 4
+														: 0
+											}}>
+											{line}
+										</Text>
+									))}
+								</View>
+								{msg.hasAttachments && (
+									<Text
 										style={{
-											marginBottom: 16,
-											padding: 12,
-											backgroundColor: "#f9f9f9",
-											borderRadius: 8
+											color: "blue",
+											fontSize: 12,
+											marginTop: 4
 										}}>
-										<Text
-											style={{
-												fontWeight: "600",
-												fontSize: 16,
-												marginBottom: 4
-											}}>
-											{msg.subject ||
-												`Nachricht ${idx + 1}`}
-										</Text>
-										<Text
-											style={{
-												color: "#666",
-												fontSize: 14,
-												marginBottom: 8
-											}}>
-											{msg.sender?.displayName ||
-												"Unbekannt"}{" "}
-											•{" "}
-											{new Date(
-												msg.sentDateTime
-											).toLocaleDateString("de-DE", {
-												day: "numeric",
-												month: "short",
-												year: "numeric"
-											})}
-										</Text>
-										<View
-											style={{
-												flex: 1,
-												marginBottom: 8
-											}}>
-											{formatMessageText(
-												msg.contentPreview || ""
-											).map((line, i) => (
-												<Text
-													key={i}
-													style={{
-														lineHeight: 20,
-														marginBottom:
-															i <
-															formatMessageText(
-																msg.contentPreview ||
-																	""
-															).length -
-																1
-																? 4
-																: 0
-													}}>
-													{line}
-												</Text>
-											))}
-										</View>
-										{msg.hasAttachments && (
-											<Text
-												style={{
-													color: "blue",
-													fontSize: 12,
-													marginTop: 4
-												}}>
-												📎 Anhang
-											</Text>
-										)}
-									</View>
-								)
-							)
-						)}
+										📎 Anhang
+									</Text>
+								)}
+							</View>
+						))}
 					</ScrollView>
 				) : (
 					<Text>Keine Mitteilungen</Text>

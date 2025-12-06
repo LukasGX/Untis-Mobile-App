@@ -46,7 +46,6 @@ const Index = () => {
 				);
 
 				if (hasPendingRequest === "true") {
-					console.log("Fetching status for " + untis.username);
 					const fetchData = async () => {
 						const { data, error } = await supabase
 							.from("requests")
@@ -59,7 +58,6 @@ const Index = () => {
 								error
 							);
 						} else {
-							console.log("Daten:", data);
 							if (data[0]?.status === "approved") {
 								setHasSpecialPermission(true);
 
