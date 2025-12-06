@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store"; // expo-secure-store installieren
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import {
 	Alert,

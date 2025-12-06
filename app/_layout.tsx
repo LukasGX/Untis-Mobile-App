@@ -7,40 +7,10 @@ const RootLayout = () => {
 		<Stack>
 			<Stack.Screen name="login" options={{ headerShown: false }} />
 			<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-			<Stack.Screen name="settings" options={{ headerShown: false }} />
 		</Stack>
 	);
 };
 
 export default RootLayout;
 
-const styles = StyleSheet.create({
-	container: {
-		padding: 10
-	},
-	heading: {
-		fontSize: 30,
-		backgroundColor: "#fcba03",
-		padding: 20,
-		textAlign: "center"
-	},
-	semiheading: {
-		fontSize: 20,
-		padding: 10,
-		textAlign: "center",
-		marginBottom: 40
-	},
-	button: {
-		fontSize: 15,
-		backgroundColor: "#ffcb3dff",
-		padding: 10,
-		borderRadius: 8,
-		textAlign: "center",
-		marginBottom: 10
-	},
-	error: {
-		color: "#b00020",
-		marginTop: 8,
-		textAlign: "center"
-	}
-});
+const styles = StyleSheet.create({});

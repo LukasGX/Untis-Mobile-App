@@ -57,9 +57,6 @@ const Login = () => {
 				password,
 				host: host.trim()
 			});
-			// (Optional) store in a global singleton for reuse by tab screens
-			// You can later move this to secure storage.
-			// Navigate to tabs root
 			router.replace("/(tabs)");
 		} catch (e: any) {
 			setError(e?.message || "Login fehlgeschlagen");

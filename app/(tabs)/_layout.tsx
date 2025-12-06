@@ -8,6 +8,9 @@ const TabsLayout = () => {
 	const [hasSpecialPermission, setHasSpecialPermission] =
 		useState<boolean>(false);
 
+	const [usesGradeManagement, setUsesGradeManagement] =
+		useState<boolean>(false);
+
 	useEffect(() => {
 		let isMounted = true;
 		(async () => {
@@ -17,6 +20,15 @@ const TabsLayout = () => {
 				);
 				if (isMounted) {
 					setHasSpecialPermission(permission === "true");
+				}
+			} catch {}
+
+			try {
+				const usesGM = await SecureStore.getItemAsync(
+					"usingGradeManagement"
+				);
+				if (isMounted) {
+					setUsesGradeManagement(usesGM === "true");
 				}
 			} catch {}
 		})();
@@ -32,7 +44,7 @@ const TabsLayout = () => {
 				tabBarActiveTintColor: "#fcba03",
 				tabBarInactiveTintColor: "#777",
 				tabBarStyle: { backgroundColor: "#fff" },
-				tabBarIconStyle: { marginBottom: 2 } // small upward shift if labels drop
+				tabBarIconStyle: { marginBottom: 2 }
 			}}>
 			<Tabs.Screen
 				name="index"
@@ -97,7 +109,7 @@ const TabsLayout = () => {
 				name="gradeManagement"
 				options={{
 					title: "Notenverwaltung",
-					href: hasSpecialPermission
+					href: usesGradeManagement
 						? "/(tabs)/gradeManagement"
 						: null,
 					tabBarIcon: ({ color, size, focused }) => (
@@ -126,6 +138,14 @@ const TabsLayout = () => {
 					)
 				}}
 			/>
+
+			{/* HIDDEN */}
+			<Tabs.Screen
+				name="addGrade"
+				options={{
+					href: null
+				}}
+			/>
 		</Tabs>
 	);
 };
@@ -134,6 +154,6 @@ export default TabsLayout;
 
 const styles = StyleSheet.create({
 	icon: {
-		marginBottom: 2 // negative pulls icon slightly up; change to positive for gap pushing label down
+		marginBottom: 2
 	}
 });

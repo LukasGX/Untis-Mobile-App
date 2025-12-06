@@ -7,7 +7,6 @@ export interface UntisCredentials {
 	user: string;
 	password: string;
 	host: string;
-	// optional map of color values (hex strings) saved together with credentials
 	colors?: Record<string, string>;
 }
 
@@ -67,10 +66,60 @@ const DEFAULT_COLORS: Record<string, string> = {
 	Wirtschaftsinformatik_bd: "#D1D1D1",
 	Wirtschaftsinformatik_bg: "#e6e6e6ff",
 	Wirtschaftsinformatik_t: "#000000",
+	Informatik_bd: "#D1D1D1",
+	Informatik_bg: "#e6e6e6ff",
+	Informatik_t: "#000000",
 	Biologie_bd: "#44693F",
 	Biologie_bg: "#a7d4a1ff",
 	Biologie_t: "#000000"
 };
+
+export const SUBJECTS_WITH_KEYS_LV = [
+	{ label: "Ethik", value: "eth" },
+	{ label: "Evangelisch", value: "ev" },
+	{ label: "Katholisch", value: "kat" },
+	{ label: "Chemie", value: "c" },
+	{ label: "Englisch", value: "e" },
+	{ label: "Geographie", value: "geo" },
+	{ label: "Kunst", value: "ku" },
+	{ label: "Musik", value: "mu" },
+	{ label: "Sport (m)", value: "sm" },
+	{ label: "Sport (w)", value: "sw" },
+	{ label: "Latein", value: "l" },
+	{ label: "Französisch", value: "fr" },
+	{ label: "Deutsch", value: "d" },
+	{ label: "Physik", value: "ph" },
+	{ label: "Geschichte", value: "g" },
+	{ label: "Mathematik", value: "m" },
+	{ label: "Wirtschaft und Recht", value: "wr" },
+	{ label: "Wirtschaftsinformatik", value: "winf" },
+	{ label: "Informatik", value: "inf" },
+	{ label: "Biologie", value: "bio" }
+];
+
+export const GRADE_TYPES_LV = [
+	{ label: "Großer Test", value: "big" },
+	{ label: "Kleiner Test", value: "small" },
+	{ label: "Stegreifaufgabe", value: "ex" },
+	{ label: "Rechenschaftsablage", value: "rech" },
+	{ label: "Referat", value: "ref" },
+	{ label: "Unterrichtsbeitrag", value: "ub" }
+];
+
+export const WEIGHTING_LV = [
+	{ label: "Einfach", value: "1" },
+	{ label: "Doppelt", value: "2" },
+	{ label: "Dreifach", value: "3" }
+];
+
+export const GRADES_LV = [
+	{ label: "Sehr gut (1)", value: "1" },
+	{ label: "Gut (2)", value: "2" },
+	{ label: "Befriedigend (3)", value: "3" },
+	{ label: "Ausreichend (4)", value: "4" },
+	{ label: "Mangelhaft (5)", value: "5" },
+	{ label: "Ungenügend (6)", value: "6" }
+];
 
 export async function saveCredentials(creds: UntisCredentials): Promise<void> {
 	await SecureStore.setItemAsync(KEY, JSON.stringify(creds));
