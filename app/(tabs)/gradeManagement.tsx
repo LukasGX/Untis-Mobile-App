@@ -1,15 +1,24 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebUntis } from "webuntis";
 import { sharedStyles } from "../../styles/shared";
-import { loadCredentials } from "../../utils/secureCredentials";
+import {
+	calculateWeightedAverage,
+	getGradesData,
+	getGradeStat,
+	GradesData,
+	loadCredentials
+} from "../../utils/secureCredentials";
 
 const GradeManagementIndex = () => {
 	const [school, setSchool] = useState<string | null>(null);
 	const [username, setUserName] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const router = useRouter();
+	const [gradeData, setGradeData] = useState<GradesData | null>(null);
+	const [gradeAverage, setGradeAverage] = useState<number>(0);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -32,11 +41,32 @@ const GradeManagementIndex = () => {
 			} catch (e: any) {
 				if (isMounted) setError(e?.message || "Login failed");
 			}
+
+			Update();
 		})();
 		return () => {
 			isMounted = false;
 		};
 	}, []);
+
+	useFocusEffect(
+		useCallback(() => {
+			Update();
+		}, [])
+	);
+
+	const Update = async () => {
+		const gradesData = await getGradesData();
+		setGradeData(gradesData);
+
+		setGradeAverage(calculateWeightedAverage(gradesData));
+	};
+
+	const absg = (grade: number) => {
+		if (gradeData != null)
+			return getGradeStat(gradeData, grade, "absolute");
+		else return 0;
+	};
 
 	return (
 		<View style={sharedStyles.screen}>
@@ -45,9 +75,58 @@ const GradeManagementIndex = () => {
 				<Text style={sharedStyles.semiHeading}>Notenverwaltung</Text>
 
 				<View style={styles.container}>
-					<Text style={sharedStyles.errorTextNoMargin}>
-						Keine Daten
-					</Text>
+					{(gradeData == null || gradeData.grades.length == 0) && (
+						<Text style={sharedStyles.errorTextNoMargin}>
+							Keine Daten
+						</Text>
+					)}
+					{gradeData != null && gradeData.grades.length > 0 && (
+						<View>
+							<Text
+								style={[styles.miniStat, { marginBottom: 8 }]}>
+								Durchschnitt: {gradeAverage.toFixed(2)}
+							</Text>
+							<View
+								style={{
+									display: "flex",
+									flexDirection: "row",
+									gap: 6,
+									flexWrap: "wrap",
+									marginVertical: 4
+								}}>
+								{absg(1) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(1)}x Sehr gut
+									</Text>
+								)}
+								{absg(2) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(2)}x Gut
+									</Text>
+								)}
+								{absg(3) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(3)}x Befriedigend
+									</Text>
+								)}
+								{absg(4) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(4)}x Ausreichend
+									</Text>
+								)}
+								{absg(5) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(5)}x Mangelhaft
+									</Text>
+								)}
+								{absg(6) > 0 && (
+									<Text style={styles.miniStat}>
+										{absg(6)}x Ungenügend
+									</Text>
+								)}
+							</View>
+						</View>
+					)}
 				</View>
 
 				<TouchableOpacity
@@ -74,5 +153,13 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 2 },
 		elevation: 2,
 		marginBottom: 20
+	},
+	miniStat: {
+		backgroundColor: "#e2e2e2ff",
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		width: "auto",
+		alignSelf: "flex-start"
 	}
 });

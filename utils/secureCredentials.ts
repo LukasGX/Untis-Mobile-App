@@ -1,4 +1,7 @@
+import { format, parseISO } from "date-fns";
+import { de } from "date-fns/locale";
 import * as SecureStore from "expo-secure-store";
+import { v4 as uuidv4 } from "uuid";
 
 const KEY = "untisCredentials";
 
@@ -107,20 +110,119 @@ export const GRADE_TYPES_LV = [
 ];
 
 export const WEIGHTING_LV = [
-	{ label: "Einfach", value: "1" },
-	{ label: "Doppelt", value: "2" },
-	{ label: "Dreifach", value: "3" }
+	{ label: "Einfach", value: 1 },
+	{ label: "Doppelt", value: 2 },
+	{ label: "Dreifach", value: 3 }
 ];
 
 export const GRADES_LV = [
-	{ label: "Sehr gut (1)", value: "1" },
-	{ label: "Gut (2)", value: "2" },
-	{ label: "Befriedigend (3)", value: "3" },
-	{ label: "Ausreichend (4)", value: "4" },
-	{ label: "Mangelhaft (5)", value: "5" },
-	{ label: "Ungenügend (6)", value: "6" }
+	{ label: "Sehr gut (1)", value: 1 },
+	{ label: "Gut (2)", value: 2 },
+	{ label: "Befriedigend (3)", value: 3 },
+	{ label: "Ausreichend (4)", value: 4 },
+	{ label: "Mangelhaft (5)", value: 5 },
+	{ label: "Ungenügend (6)", value: 6 }
 ];
 
+// grades
+export type Grade = {
+	id: string; // uuid
+	subject: string;
+	type: string;
+	value: number;
+	weight: number;
+	date: string;
+	teacher?: string;
+};
+
+export type GradesData = {
+	grades: Grade[];
+	lastUpdated: string;
+};
+
+type Measure = "absolute" | "percent";
+
+// add grade
+export const addGrade = async (grade: Omit<Grade, "id">) => {
+	const data = await getGradesData();
+	const newGrade: Grade = {
+		...grade,
+		id: uuidv4(),
+		date: new Date().toISOString().split("T")[0]
+	};
+
+	data.grades.push(newGrade);
+	await saveGradesData(data);
+};
+
+// get all grades
+export const getGradesData = async (): Promise<GradesData> => {
+	try {
+		const json = await SecureStore.getItemAsync("grades");
+		return json
+			? JSON.parse(json)
+			: { grades: [], lastUpdated: new Date().toISOString() };
+	} catch (error) {
+		console.error("Failed to load grades:", error);
+		return { grades: [], lastUpdated: new Date().toISOString() };
+	}
+};
+
+// overwrite
+export const saveGradesData = async (data: GradesData) => {
+	data.lastUpdated = new Date().toISOString();
+	await SecureStore.setItemAsync("grades", JSON.stringify(data));
+};
+
+// delete single grade
+export const deleteGrade = async (id: string) => {
+	const data = await getGradesData();
+	data.grades = data.grades.filter((g) => g.id !== id);
+	await saveGradesData(data);
+};
+
+// get weighted average
+export const calculateWeightedAverage = (gradesData: GradesData): number => {
+	if (!gradesData.grades.length) return 0;
+
+	const weightedSum = gradesData.grades.reduce(
+		(acc, grade) => acc + grade.value * grade.weight,
+		0
+	);
+
+	const totalWeight = gradesData.grades.reduce(
+		(acc, grade) => acc + grade.weight,
+		0
+	);
+
+	return parseFloat((weightedSum / totalWeight).toFixed(2));
+};
+
+export const getGradeStat = (
+	gradesData: GradesData,
+	note: number,
+	measure: Measure = "absolute"
+): number => {
+	if (!gradesData.grades.length) return 0;
+
+	// Note auf 1 Dezimalstelle runden (1.0, 1.5, 2.0, etc.)
+	const targetNote = Math.round(note * 10) / 10;
+
+	// Zähle passende Noten
+	const count = gradesData.grades.filter(
+		(g) => Math.round(g.value * 10) / 10 === targetNote
+	).length;
+
+	if (measure === "absolute") {
+		return count;
+	} else {
+		return parseFloat(
+			((count / gradesData.grades.length) * 100).toFixed(2)
+		);
+	}
+};
+
+// credentials
 export async function saveCredentials(creds: UntisCredentials): Promise<void> {
 	await SecureStore.setItemAsync(KEY, JSON.stringify(creds));
 }
@@ -146,3 +248,9 @@ export function getStoredColors(
 	if (!creds || !creds.colors) return DEFAULT_COLORS;
 	return { ...DEFAULT_COLORS, ...creds.colors };
 }
+
+export const formatDateDE = (isoDate: string) => {
+	return format(parseISO(isoDate), "dd.MM.yyyy HH:mm:ss", {
+		locale: de
+	});
+};

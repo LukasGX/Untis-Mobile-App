@@ -1,8 +1,11 @@
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import "react-native-get-random-values";
 import RNPickerSelect from "react-native-picker-select";
 import { sharedStyles } from "../../styles/shared";
 import {
+	addGrade,
 	GRADE_TYPES_LV,
 	GRADES_LV,
 	SUBJECTS_WITH_KEYS_LV,
@@ -12,8 +15,9 @@ import {
 const GradeManagementIndex = () => {
 	const [selectedSubject, setSelectedSubject] = useState("");
 	const [selectedGradeType, setSelectedGradeType] = useState("");
-	const [selectedWeighting, setSelectedWeighting] = useState("");
-	const [selectedGrade, setSelectedGrade] = useState("");
+	const [selectedWeighting, setSelectedWeighting] = useState<number>(0);
+	const [selectedGrade, setSelectedGrade] = useState<number>(0);
+	const router = useRouter();
 
 	useEffect(() => {
 		let isMounted = true;
@@ -27,6 +31,19 @@ const GradeManagementIndex = () => {
 	const gradeTypes = GRADE_TYPES_LV;
 	const weighting = WEIGHTING_LV;
 	const grades = GRADES_LV;
+
+	const saveGrade = () => {
+		const date = new Date();
+		const formattedDate = date.toISOString();
+		addGrade({
+			subject: selectedSubject,
+			type: selectedGradeType,
+			value: selectedGrade,
+			weight: selectedWeighting,
+			date: formattedDate
+		});
+		router.replace("/(tabs)/gradeManagement");
+	};
 
 	return (
 		<View style={sharedStyles.screen}>
@@ -74,6 +91,21 @@ const GradeManagementIndex = () => {
 					}}
 					style={pickerSelectStyles}
 				/>
+
+				<TouchableOpacity
+					style={[sharedStyles.button, { marginTop: 20 }]}
+					onPress={() => saveGrade()}>
+					<Text style={{ textAlign: "center" }}>Note eintragen</Text>
+				</TouchableOpacity>
+
+				<TouchableOpacity
+					style={[
+						sharedStyles.button,
+						{ backgroundColor: "#dfdfdfff" }
+					]}
+					onPress={() => router.replace("/(tabs)/gradeManagement")}>
+					<Text style={{ textAlign: "center" }}>Abbrechen</Text>
+				</TouchableOpacity>
 			</View>
 		</View>
 	);

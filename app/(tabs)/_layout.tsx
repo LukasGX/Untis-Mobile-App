@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
+import "react-native-get-random-values";
 
 const TabsLayout = () => {
 	const [hasSpecialPermission, setHasSpecialPermission] =
