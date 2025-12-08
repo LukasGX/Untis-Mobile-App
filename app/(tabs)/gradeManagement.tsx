@@ -82,9 +82,14 @@ const GradeManagementIndex = () => {
 					)}
 					{gradeData != null && gradeData.grades.length > 0 && (
 						<View>
+							<Text style={styles.miniStatTitle}>Übersicht</Text>
 							<Text
 								style={[styles.miniStat, { marginBottom: 8 }]}>
-								Durchschnitt: {gradeAverage.toFixed(2)}
+								Durchschnitt:{" "}
+								{gradeAverage
+									.toFixed(2)
+									.toString()
+									.replace(".", ",")}
 							</Text>
 							<View
 								style={{
@@ -134,6 +139,12 @@ const GradeManagementIndex = () => {
 					onPress={() => router.replace("/(tabs)/addGrade")}>
 					<Text style={{ textAlign: "center" }}>Note eintragen</Text>
 				</TouchableOpacity>
+
+				<TouchableOpacity
+					style={[sharedStyles.button, { marginHorizontal: 20 }]}
+					onPress={() => router.replace("/(tabs)/viewGrades")}>
+					<Text style={{ textAlign: "center" }}>Noten ansehen</Text>
+				</TouchableOpacity>
 			</View>
 		</View>
 	);
@@ -161,5 +172,10 @@ const styles = StyleSheet.create({
 		paddingVertical: 6,
 		width: "auto",
 		alignSelf: "flex-start"
+	},
+	miniStatTitle: {
+		fontSize: 17,
+		marginBottom: 10,
+		marginLeft: 10
 	}
 });

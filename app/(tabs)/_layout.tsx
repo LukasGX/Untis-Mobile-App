@@ -147,6 +147,18 @@ const TabsLayout = () => {
 					href: null
 				}}
 			/>
+			<Tabs.Screen
+				name="viewGrades"
+				options={{
+					href: null
+				}}
+			/>
+			<Tabs.Screen
+				name="realViewGrades"
+				options={{
+					href: null
+				}}
+			/>
 		</Tabs>
 	);
 };

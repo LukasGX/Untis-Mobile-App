@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import "react-native-get-random-values";
 import RNPickerSelect from "react-native-picker-select";
@@ -26,6 +26,16 @@ const GradeManagementIndex = () => {
 			isMounted = false;
 		};
 	}, []);
+
+	useFocusEffect(
+		useCallback(() => {
+			// reset choices
+			setSelectedSubject("");
+			setSelectedGradeType("");
+			setSelectedWeighting(0);
+			setSelectedGrade(0);
+		}, [])
+	);
 
 	const subjects = SUBJECTS_WITH_KEYS_LV;
 	const gradeTypes = GRADE_TYPES_LV;

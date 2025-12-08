@@ -155,7 +155,7 @@ export const addGrade = async (grade: Omit<Grade, "id">) => {
 	await saveGradesData(data);
 };
 
-// get all grades
+// get grades
 export const getGradesData = async (): Promise<GradesData> => {
 	try {
 		const json = await SecureStore.getItemAsync("grades");
@@ -166,6 +166,13 @@ export const getGradesData = async (): Promise<GradesData> => {
 		console.error("Failed to load grades:", error);
 		return { grades: [], lastUpdated: new Date().toISOString() };
 	}
+};
+
+export const getGradesBySubject = (
+	gradesData: GradesData,
+	subject: string
+): Grade[] => {
+	return gradesData.grades.filter((grade) => grade.subject === subject);
 };
 
 // overwrite
