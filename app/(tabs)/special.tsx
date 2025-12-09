@@ -85,6 +85,15 @@ const Special = () => {
 				);
 				setRawData(timetableData);
 				break;
+			case "homework":
+				setRawDataType("Hausaufgaben");
+				setRawDataNote("");
+				const hwData = await untis.getHomeWorksFor(
+					new Date(new Date().setDate(new Date().getDate() - 1)),
+					new Date(new Date().setDate(new Date().getDate() + 14))
+				);
+				setRawData(hwData);
+				break;
 			case "messages":
 				setRawDataType("Mitteilungen");
 				setRawDataNote("");
@@ -494,6 +503,24 @@ const Special = () => {
 									}>
 									<Text style={{ fontWeight: "600" }}>
 										Stundenplan
+									</Text>
+								</Pressable>
+
+								<Pressable
+									style={({ pressed }) => [
+										{
+											backgroundColor: "#e6f0ff",
+											paddingVertical: 12,
+											borderRadius: 8,
+											alignItems: "center"
+										},
+										pressed && { opacity: 0.7 }
+									]}
+									onPress={() =>
+										handleRawDataView("homework")
+									}>
+									<Text style={{ fontWeight: "600" }}>
+										Hausaufgaben
 									</Text>
 								</Pressable>
 

@@ -76,6 +76,20 @@ const TabsLayout = () => {
 				}}
 			/>
 			<Tabs.Screen
+				name="homework"
+				options={{
+					title: "Hausaufgaben",
+					tabBarIcon: ({ color, size, focused }) => (
+						<Ionicons
+							style={styles.icon}
+							name={focused ? "book" : "book-outline"}
+							size={size}
+							color={color}
+						/>
+					)
+				}}
+			/>
+			<Tabs.Screen
 				name="messages"
 				options={{
 					title: "Mitteilungen",

@@ -11,6 +11,7 @@ import {
 	Text,
 	View
 } from "react-native";
+import { Timegrid } from "webuntis";
 import { createUntis, realTimetable } from "../../method";
 import { sharedStyles } from "../../styles/shared";
 import {
@@ -47,10 +48,9 @@ const Timetable = () => {
 	const [timetableStyle, setTimetableStyle] = useState<
 		"style1" | "style2" | "style3"
 	>("style1");
-	const [specialPermissionRequested, setSpecialPermissionRequested] =
-		useState<boolean>(false);
 
-	// colors read from secure storage (falls back to defaults via helper)
+	const [tests, setTests] = useState<Map<Date, string> | null>(null);
+
 	const [colors, setColors] = useState<Record<string, string>>(
 		getStoredColors(null)
 	);
@@ -62,7 +62,6 @@ const Timetable = () => {
 			setError(null);
 			try {
 				const stored = await loadCredentials();
-				// always update colors (will use defaults if stored is null)
 				const storedColors = getStoredColors(stored);
 				if (isMounted) setColors(storedColors);
 				if (!stored) {
@@ -78,6 +77,7 @@ const Timetable = () => {
 					stored.host
 				);
 				await untis.login();
+				const timegrid = await untis.getTimegrid();
 				const dateToUse = dateOverride || selectedDate;
 				if (viewMode === "day") {
 					const data = await realTimetable(untis, dateToUse, false);
@@ -85,7 +85,6 @@ const Timetable = () => {
 					setTimetableWeek(null);
 				} else {
 					const weekDays = getWeekDays(dateToUse);
-					// fetch week short and long subject versions in parallel per day
 					const results = await Promise.all(
 						weekDays.map(async (d) => {
 							const [shortData, longData] = await Promise.all([
@@ -110,6 +109,23 @@ const Timetable = () => {
 					setTimetable(null);
 				}
 
+				const testsm = await untis.getExamsForRange(
+					getMondayOfWeek(new Date()),
+					getFridayOfWeek(new Date())
+				);
+
+				testsm.forEach((test) => {
+					const date = new Date(
+						test.examDate.toString().slice(0, 4) +
+							"-" +
+							test.examDate.toString().slice(4, 6) +
+							"-" +
+							test.examDate.toString().slice(6, 8)
+					);
+					const hour = getHourName(timegrid, test.startTime) ?? "";
+					tests?.set(date, hour);
+				});
+
 				// Load saved Settings
 				const savedStyle = await SecureStore.getItemAsync(
 					TIMETABLE_STYLE_KEY
@@ -121,13 +137,6 @@ const Timetable = () => {
 				) {
 					if (isMounted) setTimetableStyle(savedStyle);
 				}
-
-				const requested = await SecureStore.getItemAsync(
-					SPECIAL_PERMISSION_REQUESTED_KEY
-				);
-				if (requested === "true") {
-					if (isMounted) setSpecialPermissionRequested(true);
-				}
 			} catch (e: any) {
 				setError(e?.message || "Failed to load timetable");
 			} finally {
@@ -137,9 +146,43 @@ const Timetable = () => {
 		[selectedDate, viewMode]
 	);
 
+	const getHourName = (
+		timegrids: Timegrid[],
+		testStartTime: number
+	): string | null => {
+		const timegrid = timegrids.find((tg) => true);
+
+		if (!timegrid) return null;
+
+		const timeUnit = timegrid.timeUnits.find(
+			(unit) =>
+				testStartTime >= unit.startTime && testStartTime < unit.endTime
+		);
+
+		return timeUnit?.name || null;
+	};
+
 	useEffect(() => {
 		fetchData();
 	}, [fetchData, selectedDate, viewMode]);
+
+	const getMondayOfWeek = (d: Date): Date => {
+		const day = d.getDay();
+		const diff = (day + 6) % 7; // Abstand zum Montag
+		const monday = new Date(d);
+		monday.setHours(0, 0, 0, 0);
+		monday.setDate(d.getDate() - diff);
+		return monday;
+	};
+
+	const getFridayOfWeek = (d: Date): Date => {
+		const day = d.getDay();
+		const diff = (day + 2) % 7; // Abstand zum Freitag (5)
+		const friday = new Date(d);
+		friday.setHours(0, 0, 0, 0);
+		friday.setDate(d.getDate() + diff);
+		return friday;
+	};
 
 	// Helper to format HHmm numbers -> HH:MM
 	const formatTime = (n: number) => {
@@ -148,10 +191,26 @@ const Timetable = () => {
 		return `${s.slice(0, 2)}:${s.slice(2)}`;
 	};
 
-	// Helpers to build block arrays. Accept optional `longDayData` to attach
-	// full subject names as `lognSubject` on each block when available.
+	// Parse various Untis date formats (e.g. 20251208 or "20251208" or Date)
+	const parseUntisDate = (val: any): Date | null => {
+		if (!val && val !== 0) return null;
+		if (val instanceof Date) return new Date(val);
+		const s = String(val);
+		if (/^\d{8}$/.test(s)) {
+			const y = Number(s.slice(0, 4));
+			const m = Number(s.slice(4, 6));
+			const d = Number(s.slice(6, 8));
+			return new Date(y, m - 1, d);
+		}
+		const parsed = new Date(s);
+		if (!isNaN(parsed.getTime())) return parsed;
+		return null;
+	};
+
 	const buildBlocks = (dayData: any, longDayData?: any) => {
 		if (!dayData) return [] as any[];
+		// parse a date if the fetched day data provides one (Untis often provides YYYYMMDD)
+		const dayDate = parseUntisDate(dayData?.date);
 		const blockOrder = (id: string) => {
 			if (id === "M") return 6.5;
 			const n = Number(id);
@@ -160,11 +219,12 @@ const Timetable = () => {
 		const entries = Object.entries(dayData).filter(([k]) => k !== "date");
 		entries.sort((a, b) => blockOrder(a[0]) - blockOrder(b[0]));
 		return entries.map(([id, value]) => {
-			// try to locate corresponding long-name entry for this id
 			const longValue = longDayData ? longDayData[id] : undefined;
+			const lessonLabel = id;
 			if (Array.isArray(value)) {
 				return {
 					id,
+					lesson: lessonLabel,
 					free: false,
 					entries: value.map((v: any) => ({
 						start: v.startTime,
@@ -193,11 +253,13 @@ const Timetable = () => {
 									(value[0].lesson.subject || []).join(
 										", "
 									)) ||
-							  ""
+							  "",
+					date: dayDate || undefined
 				};
 			}
 			return {
 				id,
+				lesson: lessonLabel,
 				free: value && (value as any).lesson === null,
 				start: (value as any)?.startTime,
 				end: (value as any)?.endTime,
@@ -207,7 +269,8 @@ const Timetable = () => {
 					longValue[0] &&
 					longValue[0].lesson
 						? (longValue[0].lesson.subject || []).join(", ")
-						: ""
+						: "",
+				date: dayDate || undefined
 			};
 		});
 	};
@@ -755,6 +818,10 @@ const Timetable = () => {
 										e.subjectOld ||
 										e.teacherOld
 								);
+								const exam =
+									tests?.has(block.date) &&
+									(tests.get(block.date) as any)?.lessonId ===
+										block.lessonId;
 								return (
 									<Pressable
 										key={block.id}
@@ -767,6 +834,7 @@ const Timetable = () => {
 												styles.blockPressed,
 											cancelled && styles.blockCancelled,
 											someChange && styles.blockChanged,
+											exam && styles.exam,
 											timetableStyle === "style2" &&
 												!cancelled &&
 												!someChange &&
@@ -1278,6 +1346,9 @@ const styles = StyleSheet.create({
 		borderColor: "#32cd32",
 		borderWidth: 1,
 		position: "relative"
+	},
+	exam: {
+		backgroundColor: "#fbffcbff"
 	},
 	blockUniform: {
 		height: 60,

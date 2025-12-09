@@ -139,8 +139,8 @@ const Messages = () => {
 									{new Date(
 										msg.sentDateTime
 									).toLocaleDateString("de-DE", {
-										day: "numeric",
-										month: "short",
+										day: "2-digit",
+										month: "2-digit",
 										year: "numeric"
 									})}
 								</Text>
