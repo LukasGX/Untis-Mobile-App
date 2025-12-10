@@ -49,8 +49,6 @@ const Timetable = () => {
 		"style1" | "style2" | "style3"
 	>("style1");
 
-	const [tests, setTests] = useState<Map<Date, string> | null>(null);
-
 	const [colors, setColors] = useState<Record<string, string>>(
 		getStoredColors(null)
 	);
@@ -108,23 +106,6 @@ const Timetable = () => {
 					setTimetableWeekLong(mapLong);
 					setTimetable(null);
 				}
-
-				const testsm = await untis.getExamsForRange(
-					getMondayOfWeek(new Date()),
-					getFridayOfWeek(new Date())
-				);
-
-				testsm.forEach((test) => {
-					const date = new Date(
-						test.examDate.toString().slice(0, 4) +
-							"-" +
-							test.examDate.toString().slice(4, 6) +
-							"-" +
-							test.examDate.toString().slice(6, 8)
-					);
-					const hour = getHourName(timegrid, test.startTime) ?? "";
-					tests?.set(date, hour);
-				});
 
 				// Load saved Settings
 				const savedStyle = await SecureStore.getItemAsync(
@@ -818,10 +799,6 @@ const Timetable = () => {
 										e.subjectOld ||
 										e.teacherOld
 								);
-								const exam =
-									tests?.has(block.date) &&
-									(tests.get(block.date) as any)?.lessonId ===
-										block.lessonId;
 								return (
 									<Pressable
 										key={block.id}
@@ -834,7 +811,6 @@ const Timetable = () => {
 												styles.blockPressed,
 											cancelled && styles.blockCancelled,
 											someChange && styles.blockChanged,
-											exam && styles.exam,
 											timetableStyle === "style2" &&
 												!cancelled &&
 												!someChange &&

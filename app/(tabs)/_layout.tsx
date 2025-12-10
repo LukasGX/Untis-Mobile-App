@@ -76,9 +76,9 @@ const TabsLayout = () => {
 				}}
 			/>
 			<Tabs.Screen
-				name="homework"
+				name="events"
 				options={{
-					title: "Hausaufgaben",
+					title: "Wichtig",
 					tabBarIcon: ({ color, size, focused }) => (
 						<Ionicons
 							style={styles.icon}
