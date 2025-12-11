@@ -4,7 +4,6 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import { WebUntis } from "webuntis";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
-import { supabase } from "../../utils/supabase";
 
 const SPECIAL_PERMISSION_REQUESTED_KEY = "specialPermissionRequested";
 const SPECIAL_PERMISSION_REQUEST_PENDING_KEY =
@@ -47,10 +46,28 @@ const Index = () => {
 
 				if (hasPendingRequest === "true") {
 					const fetchData = async () => {
-						const { data, error } = await supabase
-							.from("requests")
-							.select("status")
-							.eq("username", untis.username);
+						let data;
+
+						try {
+							const response = await fetch(
+								`http://217.154.161.106:8000/requests/${untis.username}`
+							);
+
+							data = await response.json();
+
+							if (!response.ok) {
+								if (response.status === 404) {
+									console.log(
+										"Kein Request für diesen User gefunden"
+									);
+								}
+								console.log("API Error:", data);
+							}
+
+							console.log("Request data:", data);
+						} catch (err) {
+							console.error("Network error:", err);
+						}
 
 						if (error) {
 							console.error(
@@ -58,7 +75,7 @@ const Index = () => {
 								error
 							);
 						} else {
-							if (data[0]?.status === "approved") {
+							if (data?.status === "approved") {
 								setHasSpecialPermission(true);
 
 								await SecureStore.setItemAsync(
@@ -77,7 +94,7 @@ const Index = () => {
 									"Anfrage für spezielle Berechtigungen genehmigt",
 									"Du hast nach einem Neustart Zugriff auf spezielle Funktionen in der App."
 								);
-							} else if (data[0]?.status === "denied") {
+							} else if (data?.status === "denied") {
 								await SecureStore.setItemAsync(
 									SPECIAL_PERMISSION_REQUEST_PENDING_KEY,
 									"false"

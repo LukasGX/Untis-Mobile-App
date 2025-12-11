@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import {
@@ -12,12 +13,15 @@ import {
 import { WebUntis } from "webuntis";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
-import { supabase } from "../../utils/supabase";
 
 const TIMETABLE_STYLE_KEY = "timetableStyle";
 const SPECIAL_PERMISSION_REQUESTED_KEY = "specialPermissionRequested";
 const SPECIAL_PERMISSION_REQUEST_PENDING_KEY =
 	"specialPermissionRequestPending";
+
+type ExtraConfig = {
+	apiToken?: string;
+};
 
 const Settings = () => {
 	const [school, setSchool] = useState<string | null>(null);
@@ -108,7 +112,7 @@ const Settings = () => {
 	const requestSpecialPermissions = async () => {
 		Alert.alert(
 			"Anfrage für spezielle Berechtigungen",
-			"Wenn du die Anfrage absendest, werden folgende Daten an den Untis+ Entwickler gesendet:\n\n- Deine Schule\n- Dein Benutzername\n- Dein echter Name\n- Deine Rolle (Schüler oder Lehrer)\n\nDiese Daten werden ausschließlich dazu verwendet, um deine Anfrage zu bearbeiten. Es werden keine weiteren Daten gesammelt oder gespeichert.\n\nMöchtest du die Anfrage absenden?",
+			"Wenn du die Anfrage absendest, werden folgende Daten an den Untis+ Entwickler gesendet:\n\n- Deine Schule\n- Dein Benutzername\n\nDiese Daten sind, zusammen mit dem Status der Anfrage, für alle sichtbar, die deinen Benutzernamen kennen.\n\nDiese Daten werden ausschließlich dazu verwendet, um deine Anfrage zu bearbeiten. Es werden keine weiteren Daten gesammelt oder gespeichert.\n\nMöchtest du die Anfrage absenden?",
 			[
 				{
 					text: "Nein",
@@ -132,15 +136,36 @@ const Settings = () => {
 			"true"
 		);
 
-		const { data, error } = await supabase.from("requests").insert([
-			{
-				school: school,
-				username: username,
-				name: name,
-				type: type,
-				status: "pending"
+		try {
+			const extra = (Constants.expoConfig?.extra || {}) as ExtraConfig;
+			const API_TOKEN: string = extra.apiToken ?? "";
+			const response = await fetch(
+				"http://217.154.161.106:8000/new_request/",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-API-Key": API_TOKEN
+					},
+					body: JSON.stringify({
+						school: school,
+						username: username,
+						status: "pending"
+					})
+				}
+			);
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				console.log("API error:", data);
+				return;
 			}
-		]);
+
+			console.log("Success:", data);
+		} catch (err) {
+			console.error("Network error:", err);
+		}
 
 		Alert.alert(
 			"Anfrage gesendet",

@@ -45,7 +45,6 @@ const Events = () => {
 
 				// exams
 				const exams = await untis.getExamsForRange(yesterday, in2weeks);
-				console.log(exams);
 				setExamData(exams);
 			} catch (e: any) {
 				if (isMounted) setError(e?.message || "Login failed");
