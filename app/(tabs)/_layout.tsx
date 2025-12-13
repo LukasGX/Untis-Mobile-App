@@ -106,6 +106,22 @@ const TabsLayout = () => {
 				}}
 			/>
 			<Tabs.Screen
+				name="chat"
+				options={{
+					title: "Chat",
+					tabBarIcon: ({ color, size, focused }) => (
+						<Ionicons
+							style={styles.icon}
+							name={
+								focused ? "chatbubbles" : "chatbubbles-outline"
+							}
+							size={size}
+							color={color}
+						/>
+					)
+				}}
+			/>
+			<Tabs.Screen
 				name="settings"
 				options={{
 					title: "Einstellungen",
@@ -119,7 +135,6 @@ const TabsLayout = () => {
 					)
 				}}
 			/>
-
 			<Tabs.Screen
 				name="gradeManagement"
 				options={{
