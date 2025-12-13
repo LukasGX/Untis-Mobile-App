@@ -106,20 +106,6 @@ const TabsLayout = () => {
 				}}
 			/>
 			<Tabs.Screen
-				name="class"
-				options={{
-					title: "Schule",
-					tabBarIcon: ({ color, size, focused }) => (
-						<Ionicons
-							style={styles.icon}
-							name={focused ? "people" : "people-outline"}
-							size={size}
-							color={color}
-						/>
-					)
-				}}
-			/>
-			<Tabs.Screen
 				name="settings"
 				options={{
 					title: "Einstellungen",
