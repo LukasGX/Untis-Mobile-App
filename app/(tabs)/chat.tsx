@@ -1,5 +1,4 @@
-import Constants from "expo-constants";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
 	Alert,
 	ScrollView,
@@ -10,12 +9,9 @@ import {
 	View
 } from "react-native";
 import { WebUntis } from "webuntis";
+import data from "../../credentials.json";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
-
-type ExtraConfig = {
-	apiToken?: string;
-};
 
 interface Message {
 	id: number;
@@ -23,6 +19,16 @@ interface Message {
 	username: string;
 	message: string;
 	deleted?: boolean;
+}
+
+interface WsEvent {
+	type: string;
+	id?: number;
+	sent_at?: string;
+	username?: string;
+	message?: string;
+	deleted?: boolean;
+	school?: string;
 }
 
 const Chat = () => {
@@ -33,9 +39,18 @@ const Chat = () => {
 	const [message, setMsg] = useState<string>("");
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState<boolean>(false);
+	const wsRef = useRef<WebSocket | null>(null);
 
-	const extra = (Constants.expoConfig?.extra || {}) as ExtraConfig;
-	const API_TOKEN: string = extra.apiToken ?? "";
+	const API_TOKEN = data.api_token;
+
+	// WebSocket Cleanup
+	useEffect(() => {
+		return () => {
+			if (wsRef.current) {
+				wsRef.current.close();
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -70,10 +85,6 @@ const Chat = () => {
 	useEffect(() => {
 		if (school) {
 			fetchMessages();
-			const interval = setInterval(() => {
-				if (school) fetchMessages();
-			}, 5000); // 5s refresh
-			return () => clearInterval(interval);
 		}
 	}, [school]);
 
@@ -102,50 +113,97 @@ const Chat = () => {
 				}
 			);
 
-			if (!response.ok)
-				throw new Error("Nachricht konnte nicht gesendet werden");
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(
+					errorData.detail || "Nachricht konnte nicht gesendet werden"
+				);
+			}
 			setMsg("");
-			fetchMessages();
 		} catch (err: any) {
 			sendError(err.message);
 		}
 	};
 
 	const fetchMessages = async () => {
-		if (!school || school === null || school.trim() === "") {
-			console.log("SKIP: school=", school); // Debug
-			return;
-		}
-		console.log("NOSKIP: school=", school.trim());
-		console.log("🔑 API_TOKEN length:", API_TOKEN.length);
-		console.log(
-			"🔑 API_TOKEN first 10:",
-			API_TOKEN.substring(0, 10) + "..."
-		);
 		try {
 			setLoading(true);
+			const schoolValue = school?.trim();
 			const response = await fetch(
 				"http://217.154.161.106:8000/get_messages/",
 				{
 					method: "POST",
 					headers: {
-						"Content-Type": "application/x-www-form-urlencoded",
-						"x-api-key": API_TOKEN
+						"Content-Type": "application/json",
+						"X-API-Key": API_TOKEN
 					},
-					body: new URLSearchParams({ school: school.trim() })
+					body: JSON.stringify({
+						school: schoolValue
+					})
 				}
 			);
 
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				const errorText = await response.text();
+				console.error("ERROR:", errorText);
+				throw new Error(errorText);
 			}
-
-			console.log(response);
 
 			const data: Message[] = await response.json();
 			setMessages(data);
-			console.log(data);
 			setError(null);
+
+			// WebSocket mit school dynamisch!
+			if (wsRef.current) {
+				wsRef.current.close();
+			}
+			const ws = new WebSocket(
+				`ws://217.154.161.106:8000/ws/${schoolValue}?token=${API_TOKEN}`
+			);
+			wsRef.current = ws;
+
+			ws.onopen = () => console.log("WS verbunden");
+			ws.onmessage = (e) => {
+				const event: WsEvent = JSON.parse(e.data);
+				console.log("WS Event:", event);
+
+				switch (event.type) {
+					case "message_new":
+						setMessages((prev) => [event as Message, ...prev]);
+						break;
+					case "message_deleted":
+						setMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === event.id
+									? { ...msg, deleted: true }
+									: msg
+							)
+						);
+						break;
+					case "message_restored":
+						setMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === event.id
+									? {
+											...msg,
+											deleted: false,
+											message:
+												event.message || msg.message
+									  }
+									: msg
+							)
+						);
+						break;
+				}
+			};
+			ws.onerror = (e) => console.error("WS Error:", e);
+			ws.onclose = () => {
+				console.log("WS getrennt");
+				Alert.alert(
+					"Verbindung verloren",
+					"Die Verbindung zum Server wurde verloren"
+				);
+			};
 		} catch (err: any) {
 			setError(err.message);
 			console.log(`ERROR: ${err.message}`);
@@ -193,9 +251,20 @@ const Chat = () => {
 							messages.map((msg) => (
 								<View
 									key={msg.id}
-									style={styles.messageContainer}>
-									<Text style={styles.username}>
-										{msg.username}
+									style={[
+										styles.messageContainer,
+										msg.username === "[SYSTEM]" &&
+											styles.systemMsg
+									]}>
+									<Text
+										style={[
+											styles.username,
+											msg.username == "[SYSTEM]" &&
+												styles.systemTag
+										]}>
+										{msg.username == "[SYSTEM]"
+											? "SYSTEM"
+											: msg.username}
 									</Text>
 									<Text style={styles.timestamp}>
 										{new Date(msg.sent_at).toLocaleString(
@@ -303,6 +372,12 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 2
+	},
+	systemTag: {
+		color: "#ff0000ff"
+	},
+	systemMsg: {
+		backgroundColor: "#ffefe2ff"
 	},
 	username: {
 		fontWeight: "600",

@@ -1,4 +1,3 @@
-import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import {
@@ -11,6 +10,7 @@ import {
 	View
 } from "react-native";
 import { WebUntis } from "webuntis";
+import cdata from "../../credentials.json";
 import { sharedStyles } from "../../styles/shared";
 import { loadCredentials } from "../../utils/secureCredentials";
 
@@ -137,8 +137,7 @@ const Settings = () => {
 		);
 
 		try {
-			const extra = (Constants.expoConfig?.extra || {}) as ExtraConfig;
-			const API_TOKEN: string = extra.apiToken ?? "";
+			const API_TOKEN = cdata.api_token;
 			const response = await fetch(
 				"http://217.154.161.106:8000/new_request/",
 				{

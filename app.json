@@ -45,8 +45,6 @@
 			"typedRoutes": true,
 			"reactCompiler": true
 		},
-		"extra": {
-			"apiToken": "TuIv41lSOey06qJUzf9G6phAB6BwsgkzEGk"
-		}
+		"extra": {}
 	}
 }
