@@ -19,6 +19,8 @@ interface Message {
 	username: string;
 	message: string;
 	deleted?: boolean;
+	deleted_by?: string;
+	deleted_at?: string;
 }
 
 interface WsEvent {
@@ -28,6 +30,7 @@ interface WsEvent {
 	username?: string;
 	message?: string;
 	deleted?: boolean;
+	deleted_by?: string;
 	school?: string;
 }
 
@@ -96,6 +99,31 @@ const Chat = () => {
 			return;
 		}
 
+		if (containsPhoneNumber(message.trim())) {
+			Alert.alert(
+				"Telefonnummer",
+				"Es wurde eine Telefonnummer erkannt. Diese Nachricht ist für viele Personen sichtbar. Möchtest du die Nachricht wirklich absenden?",
+				[
+					{
+						text: "Ja",
+						onPress: () => {
+							realSendMessage();
+						}
+					},
+					{
+						text: "Nein",
+						onPress: () => {}
+					}
+				]
+			);
+
+			return;
+		}
+
+		realSendMessage();
+	};
+
+	const realSendMessage = async () => {
 		try {
 			const response = await fetch(
 				"http://217.154.161.106:8000/send_message/",
@@ -123,6 +151,18 @@ const Chat = () => {
 		} catch (err: any) {
 			sendError(err.message);
 		}
+	};
+
+	const containsPhoneNumber = (text: string): boolean => {
+		const internationalRegex = [
+			/\+[1-9]\d{0,4}[ -]?\(?\d[ -]?\)?[\d -]{8,14}/, // +xx xxx xxx xxx
+
+			/\b\d{10,15}\b/, // 01711234567
+
+			/\(?0\d{2,4}\)?[ -]?\d{3,8}[ -]?\d{3,8}/ // 0171 123 4567
+		];
+
+		return internationalRegex.some((regex) => regex.test(text));
 	};
 
 	const fetchMessages = async () => {
@@ -175,7 +215,11 @@ const Chat = () => {
 						setMessages((prev) =>
 							prev.map((msg) =>
 								msg.id === event.id
-									? { ...msg, deleted: true }
+									? {
+											...msg,
+											deleted: true,
+											deleted_by: event.deleted_by
+									  }
 									: msg
 							)
 						);
@@ -256,25 +300,39 @@ const Chat = () => {
 										msg.username === "[SYSTEM]" &&
 											styles.systemMsg
 									]}>
-									<Text
-										style={[
-											styles.username,
-											msg.username == "[SYSTEM]" &&
-												styles.systemTag
-										]}>
-										{msg.username == "[SYSTEM]"
-											? "SYSTEM"
-											: msg.username}
-									</Text>
-									<Text style={styles.timestamp}>
-										{new Date(msg.sent_at).toLocaleString(
-											"de-DE"
-										)}
-									</Text>
-									{msg.deleted ? (
-										<Text style={styles.deletedMsg}>
-											Nachricht gelöscht
+									<View style={styles.infoWrapper}>
+										<Text
+											style={[
+												styles.username,
+												msg.username == "[SYSTEM]" &&
+													styles.systemTag
+											]}>
+											{msg.username == "[SYSTEM]"
+												? "SYSTEM"
+												: msg.username}
 										</Text>
+										<Text style={styles.timestamp}>
+											{new Date(
+												msg.sent_at
+											).toLocaleString("de-DE")}
+										</Text>
+									</View>
+									{msg.deleted ? (
+										<View>
+											<Text style={styles.deletedMsg}>
+												Nachricht gelöscht
+												{msg.deleted_by && (
+													<Text>
+														{" "}
+														von{" "}
+														{msg.deleted_by ===
+														"[SYSTEM]"
+															? "SYSTEM"
+															: msg.deleted_by}
+													</Text>
+												)}
+											</Text>
+										</View>
 									) : (
 										<Text style={styles.messageText}>
 											{msg.message}
@@ -319,8 +377,8 @@ const styles = StyleSheet.create({
 		fontSize: 11
 	},
 	chat: {
-		marginHorizontal: 12,
-		paddingHorizontal: 16,
+		marginHorizontal: 8,
+		paddingHorizontal: 8,
 		borderRadius: 12,
 		backgroundColor: "#f9f9f9",
 		shadowColor: "#000",
@@ -363,15 +421,21 @@ const styles = StyleSheet.create({
 	},
 	messageContainer: {
 		backgroundColor: "white",
-		padding: 16,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
 		marginVertical: 4,
 		borderRadius: 12,
-		marginHorizontal: 8,
+		marginHorizontal: 6,
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 1 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 2
+	},
+	infoWrapper: {
+		display: "flex",
+		flexDirection: "row",
+		gap: 10
 	},
 	systemTag: {
 		color: "#ff0000ff"
@@ -381,12 +445,12 @@ const styles = StyleSheet.create({
 	},
 	username: {
 		fontWeight: "600",
-		fontSize: 16,
+		fontSize: 13,
 		color: "#1f2937",
 		marginBottom: 2
 	},
 	timestamp: {
-		fontSize: 12,
+		fontSize: 13,
 		color: "#6b7280",
 		marginBottom: 6
 	},
