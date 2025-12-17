@@ -202,7 +202,13 @@ const Chat = () => {
 			);
 			wsRef.current = ws;
 
-			ws.onopen = () => console.log("WS verbunden");
+			ws.onopen = () => {
+				console.log("WS verbunden");
+				Alert.alert(
+					"Verbindung hergestellt",
+					"Die Verbindung zum Server wurde hergestellt"
+				);
+			};
 			ws.onmessage = (e) => {
 				const event: WsEvent = JSON.parse(e.data);
 				console.log("WS Event:", event);
@@ -245,7 +251,7 @@ const Chat = () => {
 				console.log("WS getrennt");
 				Alert.alert(
 					"Verbindung verloren",
-					"Die Verbindung zum Server wurde verloren"
+					"Die Verbindung zum Server wurde verloren\n\nEs ist möglich, dass du die App neustarten musst, um Nachrichten zu empfangen/senden."
 				);
 			};
 		} catch (err: any) {
